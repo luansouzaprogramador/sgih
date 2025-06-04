@@ -1,0 +1,301 @@
+import React, { useState, useEffect } from "react";
+import api from "../../api";
+import { useAuth } from "../../contexts/AuthContext";
+import { FaFilePdf, FaFileCsv, FaChartLine } from "react-icons/fa";
+import * as XLSX from "xlsx"; // Importa a biblioteca xlsx
+import {
+  ReportsPageContainer,
+  Title,
+  ReportCard,
+  FilterGroup,
+  TableContainer,
+  DownloadButton,
+  NoDataMessage,
+} from "../style/RelatoriosStyles"; // Import styled components
+
+const Relatorios = () => {
+  const { user } = useAuth();
+  const [reportType, setReportType] = useState("movimentacoes");
+  const [movements, setMovements] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [selectedUnit, setSelectedUnit] = useState(user?.unidade_id || "");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  useEffect(() => {
+    fetchUnits();
+  }, []);
+
+  useEffect(() => {
+    if (user?.tipo_usuario === "estoquista" && user?.unidade_id) {
+      setSelectedUnit(user.unidade_id);
+      if (reportType === "movimentacoes") {
+        fetchMovements(user.unidade_id, startDate, endDate);
+      } else if (reportType === "estoque_critico") {
+        fetchCriticalStock(user.unidade_id);
+      }
+    } else if (user?.tipo_usuario === "gerente_estoque") {
+      // For manager, fetch all if no unit selected
+      if (reportType === "movimentacoes") {
+        fetchMovements(selectedUnit, startDate, endDate);
+      } else if (reportType === "estoque_critico") {
+        fetchCriticalStock(selectedUnit);
+      }
+    }
+  }, [reportType, selectedUnit, startDate, endDate, user]);
+
+  const fetchUnits = async () => {
+    try {
+      const response = await api.get("/unidades");
+      setUnits(response.data);
+    } catch (error) {
+      console.error("Error fetching units:", error);
+    }
+  };
+
+  const fetchMovements = async (unitId, start, end) => {
+    let url = "/movimentacoes";
+    if (unitId && unitId !== "all") {
+      url = `/movimentacoes/${unitId}`;
+    }
+
+    const params = new URLSearchParams();
+    if (start) params.append("data_inicio", start);
+    if (end) params.append("data_fim", end);
+
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    try {
+      const response = await api.get(url);
+      setMovements(response.data);
+    } catch (error) {
+      console.error("Error fetching movements:", error);
+      setMovements([]);
+    }
+  };
+
+  const fetchCriticalStock = async (unitId) => {
+    let url = "/alertas/estoque-critico";
+    if (unitId && unitId !== "all") {
+      url = `/alertas/estoque-critico/${unitId}`;
+    }
+    try {
+      const response = await api.get(url);
+      setMovements(response.data); // Re-using movements state for critical stock data
+    } catch (error) {
+      console.error("Error fetching critical stock:", error);
+      setMovements([]);
+    }
+  };
+
+  const handleGenerateReport = () => {
+    if (reportType === "movimentacoes") {
+      fetchMovements(selectedUnit, startDate, endDate);
+    } else if (reportType === "estoque_critico") {
+      fetchCriticalStock(selectedUnit);
+    }
+  };
+
+  const exportToCSV = (data, filename) => {
+    if (!data || data.length === 0) {
+      alert("Nenhum dado para exportar.");
+      return;
+    }
+    const header = Object.keys(data[0]).join(",");
+    const rows = data.map((row) => Object.values(row).join(","));
+    const csvContent =
+      "data:text/csv;charset=utf-8," + header + "\n" + rows.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToExcel = (data, filename) => {
+    if (!data || data.length === 0) {
+      alert("Nenhum dado para exportar.");
+      return;
+    }
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Relatório");
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+  };
+
+  // Mock function for PDF export (requires a library like jsPDF)
+  const exportToPDF = () => {
+    alert("Funcionalidade de exportar para PDF não implementada ainda.");
+  };
+
+  return (
+    <ReportsPageContainer>
+      <Title>Relatórios</Title>
+
+      <ReportCard>
+        <h4>
+          <FaChartLine /> Gerar Relatório
+        </h4>
+        <FilterGroup>
+          <select
+            value={reportType}
+            onChange={(e) => setReportType(e.target.value)}
+          >
+            <option value="movimentacoes">Movimentações de Estoque</option>
+            <option value="estoque_critico">Estoque Crítico</option>
+          </select>
+
+          {user?.tipo_usuario === "gerente_estoque" && (
+            <select
+              value={selectedUnit}
+              onChange={(e) => setSelectedUnit(e.target.value)}
+            >
+              <option value="">Todas as Unidades</option>
+              {units.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.nome}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {reportType === "movimentacoes" && (
+            <>
+              <input
+                type="date"
+                placeholder="Data Início"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <input
+                type="date"
+                placeholder="Data Fim"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </>
+          )}
+
+          <button className="btn-primary" onClick={handleGenerateReport}>
+            Gerar Relatório
+          </button>
+        </FilterGroup>
+
+        <TableContainer>
+          {movements.length === 0 && (
+            <NoDataMessage>
+              Nenhum dado para exibir. Selecione os filtros e clique em "Gerar
+              Relatório".
+            </NoDataMessage>
+          )}
+
+          {reportType === "movimentacoes" && movements.length > 0 && (
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Data/Hora</th>
+                    <th>Tipo</th>
+                    <th>Insumo</th>
+                    <th>Lote</th>
+                    <th>Quantidade</th>
+                    <th>Origem/Destino</th>
+                    <th>Responsável</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.map((movement) => (
+                    <tr key={movement.id}>
+                      <td>{movement.id}</td>
+                      <td>{new Date(movement.data_hora).toLocaleString()}</td>
+                      <td>{movement.tipo}</td>
+                      <td>{movement.insumo_nome}</td>
+                      <td>{movement.numero_lote || "N/A"}</td>
+                      <td>{movement.quantidade}</td>
+                      <td>{movement.unidade_nome}</td>
+                      <td>{movement.responsavel_nome}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <DownloadButton>
+                <button
+                  className="btn-csv"
+                  onClick={() =>
+                    exportToCSV(movements, "relatorio_movimentacoes")
+                  }
+                >
+                  <FaFileCsv /> Exportar CSV
+                </button>
+                <button
+                  className="btn-excel"
+                  onClick={() =>
+                    exportToExcel(movements, "relatorio_movimentacoes")
+                  }
+                >
+                  <FaFileCsv /> Exportar Excel
+                </button>
+                <button className="btn-pdf" onClick={exportToPDF}>
+                  <FaFilePdf /> Exportar PDF
+                </button>
+              </DownloadButton>
+            </>
+          )}
+
+          {reportType === "estoque_critico" && movements.length > 0 && (
+            <>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Unidade</th>
+                    <th>Insumo</th>
+                    <th>Qtd. Atual</th>
+                    <th>ID Lote</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movements.map((item) => (
+                    <tr key={item.lote_id}>
+                      <td>{item.unidade_nome}</td>
+                      <td>{item.insumo_nome}</td>
+                      <td>{item.quantidade_atual}</td>
+                      <td>{item.lote_id}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <DownloadButton>
+                <button
+                  className="btn-csv"
+                  onClick={() =>
+                    exportToCSV(movements, "relatorio_estoque_critico")
+                  }
+                >
+                  <FaFileCsv /> Exportar CSV
+                </button>
+                <button
+                  className="btn-excel"
+                  onClick={() =>
+                    exportToExcel(movements, "relatorio_estoque_critico")
+                  }
+                >
+                  <FaFileCsv /> Exportar Excel
+                </button>
+                <button className="btn-pdf" onClick={exportToPDF}>
+                  <FaFilePdf /> Exportar PDF
+                </button>
+              </DownloadButton>
+            </>
+          )}
+        </TableContainer>
+      </ReportCard>
+    </ReportsPageContainer>
+  );
+};
+
+export default Relatorios;
