@@ -176,6 +176,44 @@ app.delete('/api/users/:id', authenticateToken, authorizeRoles(['gerente_estoque
   }
 });
 
+// Adicione esta rota no servidor, na seção de AGENDAMENTOS ROUTES
+app.put('/api/agendamentos/:id/status', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    // Verificar se o agendamento existe
+    const [agendamentoRows] = await pool.execute('SELECT * FROM agendamentos WHERE id = ?', [id]);
+    if (agendamentoRows.length === 0) {
+      return res.status(404).json({ message: 'Agendamento não encontrado.' });
+    }
+
+    // Validar transição de status
+    const currentStatus = agendamentoRows[0].status;
+    const validTransitions = {
+      'pendente': ['em_transito', 'cancelado'],
+      'em_transito': ['concluido', 'cancelado'],
+      'concluido': [],
+      'cancelado': []
+    };
+
+    if (!validTransitions[currentStatus]?.includes(status)) {
+      return res.status(400).json({ message: 'Transição de status inválida.' });
+    }
+
+    // Atualizar status
+    await pool.execute(
+      'UPDATE agendamentos SET status = ? WHERE id = ?',
+      [status, id]
+    );
+
+    res.json({ message: 'Status do agendamento atualizado com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao atualizar status do agendamento:', error);
+    res.status(500).json({ message: 'Erro no servidor ao atualizar status do agendamento.' });
+  }
+});
+
 // --- UNIDADES HOSPITALARES ROUTES ---
 app.get('/api/unidades', authenticateToken, async (req, res) => {
   try {

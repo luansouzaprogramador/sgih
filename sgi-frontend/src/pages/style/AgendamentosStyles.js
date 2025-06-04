@@ -330,3 +330,58 @@ export const MessageContainer = styled.div`
     color: ${(props) => (props.type === "error" ? "#dc3545" : "#28a745")};
   }
 `;
+
+export const ItemFormContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background-color: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+`;
+
+export const ItemFormRow = styled.div`
+  display: flex;
+  gap: 15px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 10px;
+  }
+`;
+
+export const ItemFormColumn = styled.div`
+  flex: ${(props) => props.flex || 1};
+  min-width: 0;
+`;
+
+export const AddItemButton = styled.button`
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #007bff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  width: 100%;
+  max-width: 200px;
+  margin-top: 10px;
+
+  &:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+`;

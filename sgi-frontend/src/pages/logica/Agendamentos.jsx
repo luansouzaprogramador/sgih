@@ -22,6 +22,10 @@ import {
   ActionButtons,
   AddItemGroup,
   MessageContainer,
+  ItemFormContainer,
+  ItemFormRow,
+  ItemFormColumn,
+  AddItemButton,
 } from "../style/AgendamentosStyles";
 
 const Agendamentos = () => {
@@ -318,48 +322,64 @@ const Agendamentos = () => {
             </div>
 
             <h5>Adicionar Itens ao Agendamento:</h5>
-            <AddItemGroup>
-              <div className="form-group" style={{ flex: 2 }}>
-                <label>Lote do Insumo:</label>
-                <select
-                  value={currentItem.lote_id}
-                  onChange={(e) =>
-                    setCurrentItem({ ...currentItem, lote_id: e.target.value })
-                  }
-                  disabled={!form.unidade_origem_id}
-                >
-                  <option value="">Selecione o Lote</option>
-                  {filteredAvailableLotes.map((lote) => (
-                    <option key={lote.id} value={lote.id}>
-                      {lote.insumo_nome} - Lote: {lote.numero_lote} (Qtd:{" "}
-                      {lote.quantidade_atual})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label>Quantidade:</label>
-                <input
-                  type="number"
-                  value={currentItem.quantidade}
-                  onChange={(e) =>
-                    setCurrentItem({
-                      ...currentItem,
-                      quantidade: e.target.value,
-                    })
-                  }
-                  min="1"
-                  disabled={!currentItem.lote_id}
-                />
-              </div>
-              <button
+            <ItemFormContainer>
+              <ItemFormRow>
+                <ItemFormColumn flex={2}>
+                  <div className="form-group">
+                    <label>Lote do Insumo:</label>
+                    <select
+                      value={currentItem.lote_id}
+                      onChange={(e) =>
+                        setCurrentItem({
+                          ...currentItem,
+                          lote_id: e.target.value,
+                        })
+                      }
+                      disabled={!form.unidade_origem_id}
+                    >
+                      <option value="">Selecione o Lote</option>
+                      {filteredAvailableLotes.map((lote) => (
+                        <option key={lote.id} value={lote.id}>
+                          {lote.insumo_nome} - Lote: {lote.numero_lote} (Qtd:{" "}
+                          {lote.quantidade_atual})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </ItemFormColumn>
+
+                <ItemFormColumn flex={1}>
+                  <div className="form-group">
+                    <label>Quantidade:</label>
+                    <input
+                      type="number"
+                      value={currentItem.quantidade}
+                      onChange={(e) =>
+                        setCurrentItem({
+                          ...currentItem,
+                          quantidade: e.target.value,
+                        })
+                      }
+                      min="1"
+                      max={
+                        filteredAvailableLotes.find(
+                          (l) => l.id == currentItem.lote_id
+                        )?.quantidade_atual || ""
+                      }
+                      disabled={!currentItem.lote_id}
+                    />
+                  </div>
+                </ItemFormColumn>
+              </ItemFormRow>
+
+              <AddItemButton
                 type="button"
                 onClick={handleAddItem}
-                className="btn btn-primary"
+                disabled={!currentItem.lote_id || !currentItem.quantidade}
               >
-                <FaPlus /> Adicionar
-              </button>
-            </AddItemGroup>
+                <FaPlus /> Adicionar Item
+              </AddItemButton>
+            </ItemFormContainer>
 
             {form.itens.length > 0 && (
               <AddedItemsList>
