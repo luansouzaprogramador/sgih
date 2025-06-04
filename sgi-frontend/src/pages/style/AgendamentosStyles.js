@@ -1,4 +1,11 @@
 import styled from "styled-components";
+import {
+  FaCheckCircle,
+  FaTruck,
+  FaCalendarAlt,
+  FaExchangeAlt,
+  FaInfoCircle,
+} from "react-icons/fa";
 
 export const AgendamentosPageContainer = styled.div`
   padding: 30px;
@@ -26,13 +33,13 @@ export const Card = styled.div`
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   }
 
-  h3 {
+  h4 {
     color: #007bff;
     margin-bottom: 25px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 1.8em;
+    gap: 15px;
+    font-size: 1.6em;
     font-weight: 600;
   }
 
@@ -55,7 +62,8 @@ export const Card = styled.div`
   }
 
   .form-group input,
-  .form-group select {
+  .form-group select,
+  .form-group textarea {
     width: 100%;
     padding: 12px 15px;
     border: 1px solid #e0e0e0;
@@ -95,47 +103,71 @@ export const Card = styled.div`
     cursor: pointer;
     margin-top: 10px;
     transition: background-color 0.2s ease, transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+
+    &:hover {
+      transform: translateY(-2px);
+    }
   }
 
   .btn-primary {
     background-color: #007bff;
     color: #fff;
+
     &:hover {
       background-color: #0056b3;
-      transform: translateY(-2px);
     }
   }
 `;
 
-export const FormGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-`;
+export const AddedItemsList = styled.div`
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
 
-export const FilterGroup = styled.div`
-  display: flex;
-  gap: 15px;
-  margin-bottom: 25px;
-  flex-wrap: wrap;
-  align-items: center;
-
-  select {
-    flex: 1;
-    min-width: 180px;
-    padding: 12px 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 1em;
+  h5 {
+    margin-bottom: 15px;
     color: #333;
-    background-color: #fdfdff;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 1.2em;
+    font-weight: 600;
+  }
 
-    &:focus {
-      border-color: #007bff;
-      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-      outline: none;
+  ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  li {
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 15px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s ease;
+  }
+
+  li:hover {
+    background-color: #f0f0f0;
+  }
+
+  li button {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 1.2em;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: scale(1.2);
     }
   }
 `;
@@ -145,17 +177,14 @@ export const TableContainer = styled.div`
   padding: 30px;
   border-radius: 15px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  margin-top: 30px;
+  overflow-x: auto;
 
   h3 {
     color: #2c3e50;
     margin-bottom: 25px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 1.8em;
+    font-size: 2em;
     font-weight: 600;
-    border-bottom: 2px solid #e0e0e0;
-    padding-bottom: 15px;
   }
 `;
 
@@ -198,27 +227,30 @@ export const Table = styled.table`
     border-top-left-radius: 8px;
     border-bottom-left-radius: 8px;
   }
+
   td:last-child {
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
   }
 `;
 
-export const StatusIndicator = styled.span`
-  font-weight: 600;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: #fff;
+export const StatusPill = styled.span`
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85em;
+  color: white;
   background-color: ${(props) => {
-    switch (props.statusType) {
-      case "red":
-        return "#dc3545";
-      case "orange":
+    switch (props.status) {
+      case "pendente":
         return "#ffc107";
-      case "blue":
-        return "#007bff";
-      case "green":
+      case "em_transito":
+        return "#17a2b8";
+      case "concluido":
         return "#28a745";
+      case "cancelado":
+        return "#dc3545";
       default:
         return "#6c757d";
     }
@@ -227,7 +259,7 @@ export const StatusIndicator = styled.span`
 
 export const ActionButtons = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 10px;
 
   button {
     padding: 8px 12px;
@@ -235,36 +267,46 @@ export const ActionButtons = styled.div`
     border-radius: 5px;
     cursor: pointer;
     font-size: 0.9em;
-    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 5px;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      opacity: 0.9;
+    }
+
+    &.btn-success {
+      background-color: #28a745;
+      color: white;
+    }
 
     &.btn-info {
       background-color: #17a2b8;
-      color: #fff;
-      &:hover {
-        background-color: #138496;
-        transform: translateY(-1px);
-      }
+      color: white;
     }
-    &.btn-success {
-      background-color: #28a745;
-      color: #fff;
-      &:hover {
-        background-color: #218838;
-        transform: translateY(-1px);
-      }
-    }
+
     &.btn-secondary {
       background-color: #6c757d;
-      color: #fff;
-      &:hover {
-        background-color: #5a6268;
-        transform: translateY(-1px);
-      }
+      color: white;
     }
+  }
+`;
+
+export const AddItemGroup = styled.div`
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+
+  .form-group {
+    flex: 1;
+  }
+
+  button {
+    flex-shrink: 0;
+    width: auto;
+    padding: 12px 20px;
   }
 `;
 
@@ -277,35 +319,14 @@ export const MessageContainer = styled.div`
   font-size: 1.05em;
   font-weight: 500;
   gap: 12px;
-
-  ${(props) =>
-    props.type === "success" &&
-    `
-    background-color: #e6f7ed;
-    color: #28a745;
-    border: 1px solid #b2dfdb;
-    svg { color: #28a745; }
-  `}
-
-  ${(props) =>
-    props.type === "error" &&
-    `
-    background-color: #fdeaea;
-    color: #dc3545;
-    border: 1px solid #f5c6cb;
-    svg { color: #dc3545; }
-  `}
+  background-color: ${(props) =>
+    props.type === "error" ? "#fdeaea" : "#e6f7ed"};
+  color: ${(props) => (props.type === "error" ? "#dc3545" : "#28a745")};
+  border: 1px solid
+    ${(props) => (props.type === "error" ? "#f5c6cb" : "#b2dfdb")};
 
   svg {
     font-size: 1.5em;
+    color: ${(props) => (props.type === "error" ? "#dc3545" : "#28a745")};
   }
-`;
-
-export const NoDataMessage = styled.p`
-  text-align: center;
-  color: #777;
-  font-size: 1.1em;
-  padding: 20px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
 `;

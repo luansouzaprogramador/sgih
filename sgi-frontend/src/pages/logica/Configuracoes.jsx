@@ -19,7 +19,7 @@ import {
   ButtonGroup,
   MessageContainer,
   NoDataMessage,
-} from "../style/ConfiguracoesStyles"; // Import styled components
+} from "../style/ConfiguracoesStyles";
 
 const Configuracoes = () => {
   const { user } = useAuth();
@@ -34,7 +34,7 @@ const Configuracoes = () => {
     unidade_id: "",
   });
   const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [messageType, setMessageType] = useState(null); // 'success', 'error', 'info'
+  const [messageType, setMessageType] = useState(null);
 
   const displayMessage = (message, type) => {
     setFeedbackMessage(message);
@@ -42,7 +42,7 @@ const Configuracoes = () => {
     setTimeout(() => {
       setFeedbackMessage(null);
       setMessageType(null);
-    }, 5000); // Message disappears after 5 seconds
+    }, 5000);
   };
 
   useEffect(() => {
@@ -52,7 +52,7 @@ const Configuracoes = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await api.get("/usuarios");
+      const response = await api.get("/users");
       setUsers(response.data);
     } catch (error) {
       console.error("Erro ao buscar usuários:", error);
@@ -78,22 +78,26 @@ const Configuracoes = () => {
     e.preventDefault();
     try {
       const payload = {
-        ...form,
+        nome: form.nome,
+        email: form.email,
+        senha: form.password, // Campo corrigido para 'senha' conforme esperado pelo backend
+        tipo_usuario: form.tipo_usuario,
         unidade_id: form.unidade_id === "" ? null : parseInt(form.unidade_id),
       };
 
       if (editingUser) {
-        // Remove password if not changed to avoid sending empty password
-        if (!payload.password) {
-          delete payload.password;
+        // Remove senha se não for alterada
+        if (!payload.senha) {
+          delete payload.senha;
         }
-        await api.put(`/usuarios/${editingUser.id}`, payload);
+        await api.put(`/users/${editingUser.id}`, payload);
         displayMessage("Usuário atualizado com sucesso!", "success");
         setEditingUser(null);
       } else {
-        await api.post("/usuarios", payload);
+        await api.post("/auth/register", payload);
         displayMessage("Usuário cadastrado com sucesso!", "success");
       }
+
       setForm({
         nome: "",
         email: "",
@@ -101,7 +105,7 @@ const Configuracoes = () => {
         tipo_usuario: "",
         unidade_id: "",
       });
-      fetchUsers(); // Refresh the list
+      fetchUsers();
     } catch (error) {
       console.error("Erro ao salvar usuário:", error);
       displayMessage(
@@ -131,9 +135,9 @@ const Configuracoes = () => {
   const handleDeleteUser = async (id) => {
     if (window.confirm("Tem certeza que deseja excluir este usuário?")) {
       try {
-        await api.delete(`/usuarios/${id}`);
+        await api.delete(`/users/${id}`);
         displayMessage("Usuário excluído com sucesso!", "success");
-        fetchUsers(); // Refresh the list
+        fetchUsers();
       } catch (error) {
         console.error("Erro ao excluir usuário:", error);
         displayMessage(
@@ -207,7 +211,7 @@ const Configuracoes = () => {
                 placeholder={
                   editingUser ? "Deixe em branco para não alterar" : ""
                 }
-                required={!editingUser} // Password is required only for new users
+                required={!editingUser}
               />
             </div>
             <div className="form-group">
@@ -287,7 +291,11 @@ const Configuracoes = () => {
                     <td>{u.id}</td>
                     <td>{u.nome}</td>
                     <td>{u.email}</td>
-                    <td>{u.tipo_usuario}</td>
+                    <td>
+                      {u.tipo_usuario === "gerente_estoque"
+                        ? "Gerente de Estoque"
+                        : "Estoquista"}
+                    </td>
                     <td>
                       {unidades.find((unit) => unit.id === u.unidade_id)
                         ?.nome || "N/A"}

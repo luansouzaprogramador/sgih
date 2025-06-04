@@ -201,6 +201,61 @@ app.post('/api/unidades', authenticateToken, authorizeRoles(['gerente_estoque'])
   }
 });
 
+// Atualizar unidade (PUT)
+app.put('/api/unidades/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+  const { id } = req.params;
+  const { nome, endereco, telefone, email } = req.body;
+
+  try {
+    const [result] = await pool.execute(
+      'UPDATE unidades_hospitalares SET nome = ?, endereco = ?, telefone = ?, email = ? WHERE id = ?',
+      [nome, endereco, telefone, email, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Unidade não encontrada.' });
+    }
+
+    res.json({ message: 'Unidade atualizada com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao atualizar unidade:', error);
+    res.status(500).json({ message: 'Erro no servidor ao atualizar unidade.' });
+  }
+});
+
+// Excluir unidade (DELETE)
+app.delete('/api/unidades/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Verifique se a unidade está sendo usada em outras tabelas antes de deletar
+    const [checkUsage] = await pool.execute(
+      'SELECT COUNT(*) AS count FROM usuarios WHERE unidade_id = ?',
+      [id]
+    );
+
+    if (checkUsage[0].count > 0) {
+      return res.status(400).json({
+        message: 'Não é possível excluir. Esta unidade está vinculada a usuários.'
+      });
+    }
+
+    const [result] = await pool.execute(
+      'DELETE FROM unidades_hospitalares WHERE id = ?',
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Unidade não encontrada.' });
+    }
+
+    res.json({ message: 'Unidade excluída com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir unidade:', error);
+    res.status(500).json({ message: 'Erro no servidor ao excluir unidade.' });
+  }
+});
+
 // --- INSUMOS ROUTES ---
 app.get('/api/insumos', authenticateToken, async (req, res) => {
   try {
@@ -223,6 +278,61 @@ app.post('/api/insumos', authenticateToken, authorizeRoles(['gerente_estoque']),
   } catch (error) {
     console.error('Error creating insumo:', error);
     res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Atualizar insumo (PUT)
+app.put('/api/insumos/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+  const { id } = req.params;
+  const { nome, descricao, unidade_medida, local_armazenamento } = req.body;
+
+  try {
+    const [result] = await pool.execute(
+      'UPDATE insumos SET nome = ?, descricao = ?, unidade_medida = ?, local_armazenamento = ? WHERE id = ?',
+      [nome, descricao, unidade_medida, local_armazenamento, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Insumo não encontrado.' });
+    }
+
+    res.json({ message: 'Insumo atualizado com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao atualizar insumo:', error);
+    res.status(500).json({ message: 'Erro no servidor ao atualizar insumo.' });
+  }
+});
+
+// Excluir insumo (DELETE)
+app.delete('/api/insumos/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Verificar se o insumo está sendo usado em lotes antes de deletar
+    const [checkUsage] = await pool.execute(
+      'SELECT COUNT(*) AS count FROM lotes WHERE insumo_id = ?',
+      [id]
+    );
+
+    if (checkUsage[0].count > 0) {
+      return res.status(400).json({
+        message: 'Não é possível excluir. Este insumo está vinculado a lotes.'
+      });
+    }
+
+    const [result] = await pool.execute(
+      'DELETE FROM insumos WHERE id = ?',
+      [id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Insumo não encontrado.' });
+    }
+
+    res.json({ message: 'Insumo excluído com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao excluir insumo:', error);
+    res.status(500).json({ message: 'Erro no servidor ao excluir insumo.' });
   }
 });
 

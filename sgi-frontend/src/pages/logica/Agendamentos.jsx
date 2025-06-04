@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import api from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -11,41 +10,41 @@ import {
   FaExchangeAlt,
   FaExclamationCircle,
 } from "react-icons/fa";
+import api from "../../api";
 import {
   AgendamentosPageContainer,
   Title,
   Card,
-  FormGrid,
-  FilterGroup,
+  AddedItemsList,
   TableContainer,
   Table,
-  StatusIndicator,
+  StatusPill,
   ActionButtons,
+  AddItemGroup,
   MessageContainer,
-  NoDataMessage,
-} from "../style/AgendamentosStyles"; // Import styled components
+} from "../style/AgendamentosStyles";
 
 const Agendamentos = () => {
   const { user } = useAuth();
-  const [agendamentos, setAgendamentos] = useState([]);
-  const [insumos, setInsumos] = useState([]);
   const [unidades, setUnidades] = useState([]);
-  const [form, setForm] = useState({
-    insumo_id: "",
-    unidade_origem_id: "",
-    unidade_destino_id: "",
-    quantidade: "",
-    data_agendamento: null,
-    status: "pendente", // Default status
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("pendente");
-  const [filterUnit, setFilterUnit] = useState("");
-
-  // Messages state
+  const [insumos, setInsumos] = useState([]);
+  const [lotesPorUnidade, setLotesPorUnidade] = useState({});
+  const [agendamentos, setAgendamentos] = useState([]);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [messageType, setMessageType] = useState(null); // 'success', 'error', 'info'
+  const [messageType, setMessageType] = useState(null);
+
+  const [form, setForm] = useState({
+    unidade_origem_id: user?.unidade_id || "",
+    unidade_destino_id: "",
+    data_agendamento: null,
+    observacao: "",
+    itens: [],
+  });
+
+  const [currentItem, setCurrentItem] = useState({
+    lote_id: "",
+    quantidade: "",
+  });
 
   const displayMessage = (message, type) => {
     setFeedbackMessage(message);
@@ -53,336 +52,387 @@ const Agendamentos = () => {
     setTimeout(() => {
       setFeedbackMessage(null);
       setMessageType(null);
-    }, 5000); // Message disappears after 5 seconds
-  };
-
-  const fetchAgendamentos = async () => {
-    try {
-      setLoading(true);
-      let endpoint = "/agendamentos";
-      if (user?.tipo_usuario === "estoquista") {
-        endpoint = `/agendamentos/${user.unidade_id}`; // Fetch for their unit
-      }
-      const response = await api.get(endpoint);
-      setAgendamentos(response.data);
-    } catch (err) {
-      console.error("Error fetching agendamentos:", err);
-      setError("Failed to load agendamentos.");
-      displayMessage("Erro ao carregar agendamentos.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchInsumos = async () => {
-    try {
-      const response = await api.get("/insumos");
-      setInsumos(response.data);
-    } catch (error) {
-      console.error("Error fetching insumos:", error);
-    }
-  };
-
-  const fetchUnidades = async () => {
-    try {
-      const response = await api.get("/unidades");
-      setUnidades(response.data);
-    } catch (error) {
-      console.error("Error fetching unidades:", error);
-    }
+    }, 5000);
   };
 
   useEffect(() => {
-    fetchAgendamentos();
-    fetchInsumos();
-    fetchUnidades();
-    if (user?.unidade_id) {
-      setForm((prev) => ({ ...prev, unidade_origem_id: user.unidade_id }));
-      setFilterUnit(user.unidade_id); // Estoquista filters by their unit by default
-    }
+    const fetchData = async () => {
+      try {
+        const [unidadesRes, insumosRes] = await Promise.all([
+          api.get("/unidades"),
+          api.get("/insumos"),
+        ]);
+        setUnidades(unidadesRes.data);
+        setInsumos(insumosRes.data);
+
+        if (user?.unidade_id) {
+          const lotesRes = await api.get(`/lotes/${user.unidade_id}`);
+          setLotesPorUnidade((prev) => ({
+            ...prev,
+            [user.unidade_id]: lotesRes.data,
+          }));
+        }
+        if (user?.tipo_usuario === "gerente_estoque") {
+          unidadesRes.data.forEach(async (unit) => {
+            const lotesRes = await api.get(`/lotes/${unit.id}`);
+            setLotesPorUnidade((prev) => ({
+              ...prev,
+              [unit.id]: lotesRes.data,
+            }));
+          });
+        }
+
+        fetchAgendamentos();
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        displayMessage("Erro ao carregar dados iniciais", "error");
+      }
+    };
+
+    fetchData();
   }, [user]);
 
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+  const fetchAgendamentos = async () => {
+    try {
+      let endpoint = "/agendamentos";
+      if (user?.tipo_usuario === "estoquista") {
+        endpoint = `/agendamentos/${user.unidade_id}`;
+      }
+      const response = await api.get(endpoint);
+      setAgendamentos(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar agendamentos:", error);
+      displayMessage("Erro ao carregar agendamentos", "error");
+    }
   };
 
-  const handleDateChange = (date) => {
-    setForm({ ...form, data_agendamento: date });
-  };
+  const handleAddItem = () => {
+    if (!currentItem.lote_id || !currentItem.quantidade) {
+      displayMessage("Selecione um lote e informe a quantidade.", "error");
+      return;
+    }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (form.unidade_origem_id === form.unidade_destino_id) {
+    const selectedLote = lotesPorUnidade[form.unidade_origem_id]?.find(
+      (l) => l.id == currentItem.lote_id
+    );
+
+    if (!selectedLote) {
       displayMessage(
-        "Unidade de origem e destino não podem ser as mesmas.",
+        "Lote não encontrado na unidade de origem selecionada.",
         "error"
       );
       return;
     }
+
+    if (currentItem.quantidade > selectedLote.quantidade_atual) {
+      displayMessage(
+        "Quantidade a agendar excede o estoque disponível no lote.",
+        "error"
+      );
+      return;
+    }
+
+    const insumoNome = insumos.find(
+      (i) => i.id === selectedLote.insumo_id
+    )?.nome;
+
+    setForm((prevForm) => ({
+      ...prevForm,
+      itens: [
+        ...prevForm.itens,
+        {
+          lote_id: parseInt(currentItem.lote_id),
+          quantidade: parseInt(currentItem.quantidade),
+          insumo_nome: insumoNome,
+          numero_lote: selectedLote.numero_lote,
+        },
+      ],
+    }));
+    setCurrentItem({ lote_id: "", quantidade: "" });
+  };
+
+  const handleRemoveItem = (index) => {
+    setForm((prevForm) => ({
+      ...prevForm,
+      itens: prevForm.itens.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (form.itens.length === 0) {
+      displayMessage("Adicione pelo menos um item ao agendamento.", "error");
+      return;
+    }
+
+    if (!form.data_agendamento) {
+      displayMessage("Selecione uma data para o agendamento.", "error");
+      return;
+    }
+
     try {
       const payload = {
         ...form,
-        quantidade: parseInt(form.quantidade),
         data_agendamento: form.data_agendamento
-          ? form.data_agendamento.toISOString().split("T")[0]
-          : null,
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " "),
       };
       await api.post("/agendamentos", payload);
       displayMessage("Agendamento criado com sucesso!", "success");
       setForm({
-        insumo_id: "",
         unidade_origem_id: user?.unidade_id || "",
         unidade_destino_id: "",
-        quantidade: "",
         data_agendamento: null,
-        status: "pendente",
+        observacao: "",
+        itens: [],
       });
-      fetchAgendamentos(); // Refresh list
-    } catch (err) {
-      console.error("Error creating agendamento:", err);
+      fetchAgendamentos();
+    } catch (error) {
+      console.error("Erro ao criar agendamento:", error);
       displayMessage(
         `Erro ao criar agendamento: ${
-          err.response?.data?.message || err.message
+          error.response?.data?.message || error.message
         }`,
         "error"
       );
     }
   };
 
-  const handleUpdateScheduleStatus = async (id, newStatus) => {
+  const handleUpdateScheduleStatus = async (scheduleId, status) => {
+    if (
+      !window.confirm(`Tem certeza que deseja mudar o status para "${status}"?`)
+    ) {
+      return;
+    }
     try {
-      await api.put(`/agendamentos/${id}/status`, { status: newStatus });
-      displayMessage(`Agendamento atualizado para ${newStatus}!`, "success");
-      fetchAgendamentos(); // Refresh list
-    } catch (err) {
-      console.error(`Error updating agendamento status to ${newStatus}:`, err);
+      await api.put(`/agendamentos/${scheduleId}/status`, { status });
       displayMessage(
-        `Erro ao atualizar status do agendamento: ${
-          err.response?.data?.message || err.message
+        "Status do agendamento atualizado com sucesso!",
+        "success"
+      );
+      fetchAgendamentos();
+    } catch (error) {
+      console.error("Erro ao atualizar status do agendamento:", error);
+      displayMessage(
+        `Erro ao atualizar status: ${
+          error.response?.data?.message || error.message
         }`,
         "error"
       );
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "pendente":
-        return "orange";
-      case "em_transito":
-        return "blue";
-      case "concluido":
-        return "green";
-      case "cancelado":
-        return "red";
-      default:
-        return "gray";
-    }
-  };
-
-  const filteredAgendamentos = agendamentos.filter((schedule) => {
-    const matchesStatus =
-      filterStatus === "" || schedule.status === filterStatus;
-    const matchesUnit =
-      filterUnit === "" ||
-      schedule.unidade_origem_id === parseInt(filterUnit) ||
-      schedule.unidade_destino_id === parseInt(filterUnit);
-
-    return matchesStatus && matchesUnit;
+  const availableLotes = lotesPorUnidade[form.unidade_origem_id] || [];
+  const filteredAvailableLotes = availableLotes.filter((lote) => {
+    const isExpired = new Date(lote.data_validade) < new Date();
+    return lote.quantidade_atual > 0 && lote.status === "ativo" && !isExpired;
   });
-
-  if (loading)
-    return (
-      <AgendamentosPageContainer>
-        Carregando Agendamentos...
-      </AgendamentosPageContainer>
-    );
-  if (error)
-    return (
-      <AgendamentosPageContainer style={{ color: "red" }}>
-        Erro: {error}
-      </AgendamentosPageContainer>
-    );
 
   return (
     <AgendamentosPageContainer>
-      <Title>Agendamentos de Transferência</Title>
+      <Title>Agendamento de Entregas</Title>
 
       {feedbackMessage && (
         <MessageContainer type={messageType}>
-          {messageType === "success" && <FaCheckCircle />}
-          {messageType === "error" && <FaExclamationCircle />}
+          {messageType === "error" ? (
+            <FaExclamationCircle />
+          ) : (
+            <FaCheckCircle />
+          )}
           {feedbackMessage}
         </MessageContainer>
       )}
 
-      {(user?.tipo_usuario === "gerente_estoque" ||
-        user?.tipo_usuario === "estoquista") && (
+      {user?.tipo_usuario === "gerente_estoque" && (
         <Card>
-          <h3>
-            <FaPlus /> Novo Agendamento
-          </h3>
+          <h4>
+            <FaCalendarAlt /> Criar Novo Agendamento de Entrega
+          </h4>
           <form onSubmit={handleSubmit}>
-            <FormGrid>
-              <div className="form-group">
-                <label>Insumo:</label>
+            <div className="form-group">
+              <label>Unidade de Origem:</label>
+              <select
+                value={form.unidade_origem_id}
+                onChange={(e) => {
+                  setForm({ ...form, unidade_origem_id: e.target.value });
+                  setCurrentItem({ lote_id: "", quantidade: "" });
+                }}
+                required
+              >
+                <option value="">Selecione a Unidade de Origem</option>
+                {unidades.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Unidade de Destino:</label>
+              <select
+                value={form.unidade_destino_id}
+                onChange={(e) =>
+                  setForm({ ...form, unidade_destino_id: e.target.value })
+                }
+                required
+              >
+                <option value="">Selecione a Unidade de Destino</option>
+                {unidades
+                  .filter((unit) => unit.id != form.unidade_origem_id)
+                  .map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.nome}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Data e Hora do Agendamento:</label>
+              <DatePicker
+                selected={form.data_agendamento}
+                onChange={(date) =>
+                  setForm({ ...form, data_agendamento: date })
+                }
+                showTimeSelect
+                dateFormat="dd/MM/yyyy HH:mm"
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                placeholderText="Selecione a data e hora"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Observação:</label>
+              <textarea
+                value={form.observacao}
+                onChange={(e) =>
+                  setForm({ ...form, observacao: e.target.value })
+                }
+                rows="3"
+                placeholder="Ex: Urgente, manusear com cuidado..."
+              ></textarea>
+            </div>
+
+            <h5>Adicionar Itens ao Agendamento:</h5>
+            <AddItemGroup>
+              <div className="form-group" style={{ flex: 2 }}>
+                <label>Lote do Insumo:</label>
                 <select
-                  name="insumo_id"
-                  value={form.insumo_id}
-                  onChange={handleFormChange}
-                  required
+                  value={currentItem.lote_id}
+                  onChange={(e) =>
+                    setCurrentItem({ ...currentItem, lote_id: e.target.value })
+                  }
+                  disabled={!form.unidade_origem_id}
                 >
-                  <option value="">Selecione o Insumo</option>
-                  {insumos.map((insumo) => (
-                    <option key={insumo.id} value={insumo.id}>
-                      {insumo.nome}
+                  <option value="">Selecione o Lote</option>
+                  {filteredAvailableLotes.map((lote) => (
+                    <option key={lote.id} value={lote.id}>
+                      {lote.insumo_nome} - Lote: {lote.numero_lote} (Qtd:{" "}
+                      {lote.quantidade_atual})
                     </option>
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label>Unidade de Origem:</label>
-                <select
-                  name="unidade_origem_id"
-                  value={form.unidade_origem_id}
-                  onChange={handleFormChange}
-                  disabled={user?.tipo_usuario === "estoquista"}
-                  required
-                >
-                  <option value="">Selecione a Unidade</option>
-                  {unidades.map((unidade) => (
-                    <option key={unidade.id} value={unidade.id}>
-                      {unidade.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Unidade de Destino:</label>
-                <select
-                  name="unidade_destino_id"
-                  value={form.unidade_destino_id}
-                  onChange={handleFormChange}
-                  required
-                >
-                  <option value="">Selecione a Unidade</option>
-                  {unidades
-                    .filter((u) => u.id !== parseInt(form.unidade_origem_id))
-                    .map((unidade) => (
-                      <option key={unidade.id} value={unidade.id}>
-                        {unidade.nome}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              <div className="form-group">
+              <div className="form-group" style={{ flex: 1 }}>
                 <label>Quantidade:</label>
                 <input
                   type="number"
-                  name="quantidade"
-                  value={form.quantidade}
-                  onChange={handleFormChange}
+                  value={currentItem.quantidade}
+                  onChange={(e) =>
+                    setCurrentItem({
+                      ...currentItem,
+                      quantidade: e.target.value,
+                    })
+                  }
                   min="1"
-                  required
+                  disabled={!currentItem.lote_id}
                 />
               </div>
-              <div className="form-group">
-                <label>Data do Agendamento:</label>
-                <DatePicker
-                  selected={form.data_agendamento}
-                  onChange={handleDateChange}
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="Selecione a data"
-                  required
-                />
-              </div>
-            </FormGrid>
+              <button
+                type="button"
+                onClick={handleAddItem}
+                className="btn btn-primary"
+              >
+                <FaPlus /> Adicionar
+              </button>
+            </AddItemGroup>
+
+            {form.itens.length > 0 && (
+              <AddedItemsList>
+                <h5>Itens Agendados:</h5>
+                <ul>
+                  {form.itens.map((item, index) => (
+                    <li key={index}>
+                      {item.insumo_nome} (Lote: {item.numero_lote}) - Qtd:{" "}
+                      {item.quantidade}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(index)}
+                      >
+                        X
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </AddedItemsList>
+            )}
+
             <button type="submit" className="btn btn-primary">
-              Criar Agendamento
+              <FaExchangeAlt /> Agendar Entrega
             </button>
           </form>
         </Card>
       )}
 
       <TableContainer>
-        <h3>
-          <FaCalendarAlt /> Meus Agendamentos
-        </h3>
-        <FilterGroup>
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="">Todos os Status</option>
-            <option value="pendente">Pendente</option>
-            <option value="em_transito">Em Trânsito</option>
-            <option value="concluido">Concluído</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-
-          {user?.tipo_usuario === "gerente_estoque" && (
-            <select
-              value={filterUnit}
-              onChange={(e) => setFilterUnit(e.target.value)}
-            >
-              <option value="">Todas as Unidades</option>
-              {unidades.map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.nome}
-                </option>
-              ))}
-            </select>
-          )}
-        </FilterGroup>
-
+        <h3>Agendamentos de Entregas</h3>
         <Table>
           <thead>
             <tr>
               <th>ID</th>
-              <th>Insumo</th>
               <th>Origem</th>
               <th>Destino</th>
-              <th>Quantidade</th>
-              <th>Data</th>
+              <th>Data/Hora</th>
+              <th>Itens</th>
               <th>Status</th>
-              {(user?.tipo_usuario === "gerente_estoque" ||
-                user?.tipo_usuario === "estoquista") && <th>Ações</th>}
+              <th>Responsável</th>
+              {user?.tipo_usuario === "gerente_estoque" && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
-            {filteredAgendamentos.length > 0 ? (
-              filteredAgendamentos.map((schedule) => (
+            {agendamentos.length > 0 ? (
+              agendamentos.map((schedule) => (
                 <tr key={schedule.id}>
                   <td>{schedule.id}</td>
+                  <td>{schedule.unidade_origem_nome}</td>
+                  <td>{schedule.unidade_destino_nome}</td>
                   <td>
-                    {insumos.find((i) => i.id === schedule.insumo_id)?.nome ||
-                      "N/A"}
+                    {new Date(schedule.data_agendamento).toLocaleString()}
                   </td>
                   <td>
-                    {unidades.find((u) => u.id === schedule.unidade_origem_id)
-                      ?.nome || "N/A"}
+                    {schedule.itens_agendados &&
+                    schedule.itens_agendados.length > 0
+                      ? schedule.itens_agendados.map((item) => (
+                          <div key={item.lote_id}>
+                            {item.insumo_nome}: {item.quantidade}
+                          </div>
+                        ))
+                      : "N/A"}
                   </td>
                   <td>
-                    {unidades.find((u) => u.id === schedule.unidade_destino_id)
-                      ?.nome || "N/A"}
-                  </td>
-                  <td>{schedule.quantidade}</td>
-                  <td>
-                    {new Date(schedule.data_agendamento).toLocaleDateString()}
-                  </td>
-                  <td>
-                    <StatusIndicator
-                      statusType={getStatusColor(schedule.status)}
-                    >
+                    <StatusPill status={schedule.status}>
                       {schedule.status === "pendente" && "Pendente"}
                       {schedule.status === "em_transito" && "Em Trânsito"}
                       {schedule.status === "concluido" && "Concluído"}
                       {schedule.status === "cancelado" && "Cancelado"}
-                    </StatusIndicator>
+                    </StatusPill>
                   </td>
-                  {(user?.tipo_usuario === "gerente_estoque" ||
-                    user?.tipo_usuario === "estoquista") && (
+                  <td>{schedule.responsavel_agendamento_nome}</td>
+                  {user?.tipo_usuario === "gerente_estoque" && (
                     <td>
                       <ActionButtons>
                         {schedule.status === "pendente" && (
@@ -399,22 +449,20 @@ const Agendamentos = () => {
                             <FaTruck />
                           </button>
                         )}
-                        {(schedule.status === "pendente" ||
-                          schedule.status === "em_transito") &&
-                          user?.unidade_id === schedule.unidade_destino_id && (
-                            <button
-                              className="btn btn-success"
-                              onClick={() =>
-                                handleUpdateScheduleStatus(
-                                  schedule.id,
-                                  "concluido"
-                                )
-                              }
-                              title="Marcar como Concluído"
-                            >
-                              <FaCheckCircle />
-                            </button>
-                          )}
+                        {schedule.status === "em_transito" && (
+                          <button
+                            className="btn btn-success"
+                            onClick={() =>
+                              handleUpdateScheduleStatus(
+                                schedule.id,
+                                "concluido"
+                              )
+                            }
+                            title="Marcar como Concluído"
+                          >
+                            <FaCheckCircle />
+                          </button>
+                        )}
                         {(schedule.status === "pendente" ||
                           schedule.status === "em_transito") && (
                           <button
@@ -440,7 +488,7 @@ const Agendamentos = () => {
                 <td
                   colSpan={user?.tipo_usuario === "gerente_estoque" ? "8" : "7"}
                 >
-                  <NoDataMessage>Nenhum agendamento encontrado.</NoDataMessage>
+                  Nenhum agendamento encontrado.
                 </td>
               </tr>
             )}
