@@ -163,11 +163,11 @@ const Insumos = () => {
     }
   };
 
-  // If user is not 'estoquista' or 'gerente_estoque', deny access
+  // If user is not 'almoxarife_central' or 'gestor', deny access
   if (
     !user ||
-    (user.tipo_usuario !== "estoquista" &&
-      user.tipo_usuario !== "gerente_estoque")
+    (user.tipo_usuario !== "almoxarife_central" &&
+      user.tipo_usuario !== "gestor")
   ) {
     return (
       <InsumosPageContainer>
@@ -192,8 +192,8 @@ const Insumos = () => {
         </MessageContainer>
       )}
 
-      {/* Estoquista: Form for adding/editing insumos */}
-      {user.tipo_usuario === "estoquista" && (
+      {/* almoxarife_central: Form for adding/editing insumos */}
+      {user.tipo_usuario === "almoxarife_central" && (
         <InsumoCard>
           <h4>
             {editingInsumo ? <FaEdit /> : <FaPlus />}
@@ -265,8 +265,8 @@ const Insumos = () => {
         </InsumoCard>
       )}
 
-      {/* Gerente de Estoque: Form for requesting insumos */}
-      {user.tipo_usuario === "gerente_estoque" && (
+      {/* Gestor: Form for requesting insumos */}
+      {user.tipo_usuario === "gestor" && (
         <InsumoCard>
           <h4>
             <FaClipboardList /> Solicitar Insumo
@@ -323,8 +323,10 @@ const Insumos = () => {
                 <th>Descrição</th>
                 <th>Unidade de Medida</th>
                 <th>Local de Armazenamento</th>
-                {user.tipo_usuario === "estoquista" && <th>Ações</th>}{" "}
-                {/* Actions column only for Estoquista */}
+                {user.tipo_usuario === "almoxarife_central" && (
+                  <th>Ações</th>
+                )}{" "}
+                {/* Actions column only for almoxarife_central */}
               </tr>
             </thead>
             <tbody>
@@ -336,7 +338,7 @@ const Insumos = () => {
                     <td>{insumo.descricao || "N/A"}</td>
                     <td>{insumo.unidade_medida || "N/A"}</td>
                     <td>{insumo.local_armazenamento || "N/A"}</td>
-                    {user.tipo_usuario === "estoquista" && ( // Action buttons only for Estoquista
+                    {user.tipo_usuario === "almoxarife_central" && ( // Action buttons only for almoxarife_central
                       <td>
                         <ButtonGroup>
                           <button
@@ -360,7 +362,11 @@ const Insumos = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={user.tipo_usuario === "estoquista" ? "6" : "5"}>
+                  <td
+                    colSpan={
+                      user.tipo_usuario === "almoxarife_central" ? "6" : "5"
+                    }
+                  >
                     {" "}
                     {/* Adjust colspan based on role */}
                     <NoDataMessage>Nenhum insumo cadastrado.</NoDataMessage>

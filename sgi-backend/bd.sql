@@ -148,6 +148,11 @@ INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('Pro
 
 -- Insert Users
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Administrador Geral', 'admin@fhemig.gov.br', '$2b$10$6.zRaRcWWANpeqLLxu0i..7b/SjyDbw1O9/Rkub6X6Wk/LcJ3Z9ES', 'gerente_estoque', 1);
+USE sgi_saude;
+INSERT INTO usuarios_teste (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Gestor', 'gestor@fhemig.gov.br', '$2b$10$J5O4tGS42BnqgBTtKEVrHuKS06B5p972eKAI0hLZtLCJdGSu9J8Vm', 'gestor', 1);
+INSERT INTO usuarios_teste (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Gestor', 'admin@fhemig.gov.br', '$2b$10$6.zRaRcWWANpeqLLxu0i..7b/SjyDbw1O9/Rkub6X6Wk/LcJ3Z9ES', 'gestor', 1);
+
+
 
 -- Insert Insumos
 INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Máscara Cirúrgica', 'Máscara descartável de proteção facial', 'caixa', 'Almoxarifado Principal');

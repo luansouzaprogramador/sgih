@@ -8,7 +8,7 @@ router.get('/:unidadeId', authenticateToken, async (req, res) => {
   const { unidadeId } = req.params;
   const { insumoId, periodo } = req.query;
   try {
-    if (req.user.tipo_usuario === 'estoquista' && req.user.unidade_id != unidadeId) {
+    if (req.user.tipo_usuario === 'almoxarife_central' && req.user.unidade_id != unidadeId) {
       return res.status(403).send('Access denied.');
     }
     let query = `

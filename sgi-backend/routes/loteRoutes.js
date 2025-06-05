@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/:unidadeId', authenticateToken, async (req, res) => {
   const { unidadeId } = req.params;
   try {
-    if (req.user.tipo_usuario === 'estoquista' && req.user.unidade_id != unidadeId) {
+    if (req.user.tipo_usuario === 'almoxarife_central' && req.user.unidade_id != unidadeId) {
       return res.status(403).send('Access denied.');
     }
 
@@ -26,7 +26,7 @@ router.get('/:unidadeId', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/entrada', authenticateToken, authorizeRoles(['estoquista', 'gerente_estoque']), async (req, res) => {
+router.post('/entrada', authenticateToken, authorizeRoles(['almoxarife_central', 'gestor']), async (req, res) => {
   const { insumo_id, numero_lote, data_validade, quantidade, unidade_id } = req.body;
   const responsavel_id = req.user.id;
 
@@ -51,7 +51,7 @@ router.post('/entrada', authenticateToken, authorizeRoles(['estoquista', 'gerent
   }
 });
 
-router.post('/saida', authenticateToken, authorizeRoles(['estoquista', 'gerente_estoque']), async (req, res) => {
+router.post('/saida', authenticateToken, authorizeRoles(['almoxarife_central', 'gestor']), async (req, res) => {
   const { lote_id, quantidade_saida, unidade_origem_id } = req.body;
   const responsavel_id = req.user.id;
 

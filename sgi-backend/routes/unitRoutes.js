@@ -14,7 +14,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
   const { nome, endereco, telefone, email } = req.body;
   try {
     const [result] = await pool.execute(
@@ -28,7 +28,7 @@ router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (
   }
 });
 
-router.put('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
   const { id } = req.params;
   const { nome, endereco, telefone, email } = req.body;
   try {
@@ -48,7 +48,7 @@ router.put('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async
   }
 });
 
-router.delete('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
   const { id } = req.params;
 
   try {

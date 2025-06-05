@@ -76,7 +76,7 @@ const Agendamentos = () => {
             [user.unidade_id]: lotesRes.data,
           }));
         }
-        if (user?.tipo_usuario === "gerente_estoque") {
+        if (user?.tipo_usuario === "almoxarife_central") {
           unidadesRes.data.forEach(async (unit) => {
             const lotesRes = await api.get(`/lotes/${unit.id}`);
             setLotesPorUnidade((prev) => ({
@@ -99,7 +99,7 @@ const Agendamentos = () => {
   const fetchAgendamentos = async () => {
     try {
       let endpoint = "/agendamentos";
-      if (user?.tipo_usuario === "estoquista") {
+      if (user?.tipo_usuario === "almoxarife_central") {
         endpoint = `/agendamentos/${user.unidade_id}`;
       }
       const response = await api.get(endpoint);
@@ -248,7 +248,7 @@ const Agendamentos = () => {
         </MessageContainer>
       )}
 
-      {user?.tipo_usuario === "gerente_estoque" && (
+      {user?.tipo_usuario === "almoxarife_central" && (
         <Card>
           <h4>
             <FaCalendarAlt /> Criar Novo Agendamento de Entrega
@@ -420,7 +420,7 @@ const Agendamentos = () => {
               <th>Itens</th>
               <th>Status</th>
               <th>Responsável</th>
-              {user?.tipo_usuario === "gerente_estoque" && <th>Ações</th>}
+              {user?.tipo_usuario === "almoxarife_central" && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -452,7 +452,7 @@ const Agendamentos = () => {
                     </StatusPill>
                   </td>
                   <td>{schedule.responsavel_agendamento_nome}</td>
-                  {user?.tipo_usuario === "gerente_estoque" && (
+                  {user?.tipo_usuario === "almoxarife_central" && (
                     <td>
                       <ActionButtons>
                         {schedule.status === "pendente" && (
@@ -506,7 +506,9 @@ const Agendamentos = () => {
             ) : (
               <tr>
                 <td
-                  colSpan={user?.tipo_usuario === "gerente_estoque" ? "8" : "7"}
+                  colSpan={
+                    user?.tipo_usuario === "almoxarife_central" ? "8" : "7"
+                  }
                 >
                   Nenhum agendamento encontrado.
                 </td>

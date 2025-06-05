@@ -150,7 +150,7 @@ const Configuracoes = () => {
     }
   };
 
-  if (user?.tipo_usuario !== "gerente_estoque") {
+  if (user?.tipo_usuario !== "gestor") {
     return (
       <SettingsPageContainer>
         <MessageContainer type="error">
@@ -223,8 +223,10 @@ const Configuracoes = () => {
                 required
               >
                 <option value="">Selecione o Tipo</option>
-                <option value="gerente_estoque">Gerente de Estoque</option>
-                <option value="estoquista">Estoquista</option>
+                <option value="gestor">Gestor</option>
+                <option value="almoxarife_central">Almoxarifado Central</option>
+                <option value="almoxarife_local">Almoxarife Local</option>
+                <option value="profissionais_saude">Profissionais Saúde</option>
               </select>
             </div>
             <div className="form-group">
@@ -292,9 +294,13 @@ const Configuracoes = () => {
                     <td>{u.nome}</td>
                     <td>{u.email}</td>
                     <td>
-                      {u.tipo_usuario === "gerente_estoque"
-                        ? "Gerente de Estoque"
-                        : "Estoquista"}
+                      {u.tipo_usuario === "gestor"
+                        ? "Gestor"
+                        : u.tipo_usuario === "almoxarife_local"
+                        ? "Almoxarife Local"
+                        : u.tipo_usuario === "almoxarife_central"
+                        ? "Almoxarife Central"
+                        : "Profissional de Saúde"}
                     </td>
                     <td>
                       {unidades.find((unit) => unit.id === u.unidade_id)

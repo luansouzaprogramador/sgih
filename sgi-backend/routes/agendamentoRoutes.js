@@ -24,7 +24,7 @@ router.get('/:unidadeId', authenticateToken, async (req, res) => {
       LEFT JOIN insumos i ON l.insumo_id = i.id
     `;
     const params = [];
-    if (req.user.tipo_usuario === 'estoquista') {
+    if (req.user.tipo_usuario === 'almoxarife_central') {
       query += ` WHERE a.unidade_origem_id = ? OR a.unidade_destino_id = ?`;
       params.push(req.user.unidade_id, req.user.unidade_id);
     } else { // Assume it's a manager or other role when unidadeId is provided
@@ -58,7 +58,7 @@ router.get('/', authenticateToken, async (req, res) => {
       LEFT JOIN insumos i ON l.insumo_id = i.id
     `;
     const params = [];
-    if (req.user.tipo_usuario === 'estoquista') {
+    if (req.user.tipo_usuario === 'almoxarife_central') {
       query += ` WHERE a.unidade_origem_id = ? OR a.unidade_destino_id = ?`;
       params.push(req.user.unidade_id, req.user.unidade_id);
     }
@@ -71,7 +71,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
   const {
     unidade_origem_id,
     unidade_destino_id,
@@ -124,7 +124,7 @@ router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (
   }
 });
 
-router.put('/:id/status', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.put('/:id/status', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -158,7 +158,7 @@ router.put('/:id/status', authenticateToken, authorizeRoles(['gerente_estoque'])
 });
 
 
-router.post('/:id/concluir', authenticateToken, authorizeRoles(['estoquista', 'gerente_estoque']), async (req, res) => {
+router.post('/:id/concluir', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
   const { id } = req.params;
   const responsavel_id = req.user.id;
   const unidade_destino_id = req.user.unidade_id;

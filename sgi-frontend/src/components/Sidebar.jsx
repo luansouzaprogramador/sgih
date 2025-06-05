@@ -99,7 +99,7 @@ const Sidebar = () => {
   const { user } = useAuth();
   const location = useLocation();
 
-  const isManager = user && user.tipo_usuario === "gerente_estoque";
+  const isManager = user && user.tipo_usuario === "gestor";
 
   return (
     <SidebarContainer>

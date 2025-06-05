@@ -42,7 +42,7 @@ const Dashboard = () => {
         const totalInsumos = insumosRes.data.length;
 
         const agendamentosEndpoint =
-          user.tipo_usuario === "estoquista"
+          user.tipo_usuario === "almoxarife_central"
             ? `/agendamentos/${user.unidade_id}`
             : "/agendamentos/";
 

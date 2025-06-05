@@ -127,7 +127,7 @@ const Unidades = () => {
     }
   };
 
-  if (user?.tipo_usuario !== "gerente_estoque") {
+  if (user?.tipo_usuario !== "gestor") {
     return (
       <UnitsPageContainer>
         <MessageContainer type="error">

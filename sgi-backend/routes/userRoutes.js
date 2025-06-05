@@ -4,7 +4,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.get('/', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT id, nome, email, tipo_usuario, unidade_id FROM usuarios');
     res.json(rows);
@@ -14,7 +14,7 @@ router.get('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (r
   }
 });
 
-router.put('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
   const { id } = req.params;
   const { nome, email, tipo_usuario, unidade_id } = req.body;
   try {
@@ -35,7 +35,7 @@ router.put('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async
   }
 });
 
-router.delete('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
   const { id } = req.params;
   try {
     const [result] = await pool.execute('DELETE FROM usuarios WHERE id = ?', [id]);

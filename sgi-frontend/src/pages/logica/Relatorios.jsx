@@ -34,14 +34,14 @@ const Relatorios = () => {
   }, []);
 
   useEffect(() => {
-    if (user?.tipo_usuario === "estoquista" && user?.unidade_id) {
+    if (user?.tipo_usuario === "almoxarife_central" && user?.unidade_id) {
       setSelectedUnit(user.unidade_id);
       if (reportType === "movimentacoes") {
         fetchMovements(user.unidade_id, startDate, endDate);
       } else if (reportType === "estoque_critico") {
         fetchCriticalStock(user.unidade_id);
       }
-    } else if (user?.tipo_usuario === "gerente_estoque") {
+    } else if (user?.tipo_usuario === "gestor") {
       if (reportType === "movimentacoes") {
         fetchMovements(selectedUnit, startDate, endDate);
       } else if (reportType === "estoque_critico") {
@@ -138,7 +138,7 @@ const Relatorios = () => {
   };
 
   // Conditional rendering based on user type
-  if (user?.tipo_usuario !== "gerente_estoque") {
+  if (user?.tipo_usuario !== "gestor") {
     return (
       <ReportsPageContainer>
         <MessageContainer type="error">
@@ -166,7 +166,7 @@ const Relatorios = () => {
             <option value="estoque_critico">Estoque Crítico</option>
           </select>
 
-          {user?.tipo_usuario === "gerente_estoque" && (
+          {user?.tipo_usuario === "gestor" && (
             <select
               value={selectedUnit}
               onChange={(e) => setSelectedUnit(e.target.value)}

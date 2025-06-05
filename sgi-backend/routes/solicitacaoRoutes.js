@@ -5,7 +5,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const router = express.Router();
 
 // Endpoint for submitting insumo requests
-router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
   const { insumo_id, quantidade } = req.body;
   const solicitante_id = req.user.userId; // Assuming req.user is populated by authenticateToken
 
@@ -26,8 +26,8 @@ router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (
 });
 
 // You might also want endpoints to view all requests, update status, etc.
-// router.get('/', authenticateToken, authorizeRoles(['estoquista', 'gerente_estoque']), async (req, res) => { ... });
-// router.put('/:id/status', authenticateToken, authorizeRoles(['estoquista']), async (req, res) => { ... });
+// router.get('/', authenticateToken, authorizeRoles(['almoxarife_central', 'gestor']), async (req, res) => { ... });
+// router.put('/:id/status', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => { ... });
 
 
 module.exports = router;
