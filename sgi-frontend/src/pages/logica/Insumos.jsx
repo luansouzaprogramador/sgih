@@ -7,6 +7,8 @@ import {
   FaCheckCircle,
   FaExclamationCircle,
   FaInfoCircle,
+  FaClipboardList, // New icon for request section
+  FaBoxOpen, // Icon for list section
 } from "react-icons/fa";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -18,13 +20,13 @@ import {
   ButtonGroup,
   MessageContainer,
   NoDataMessage,
-} from "../style/InsumosStyles"; // Import styled components
+} from "../style/InsumosStyles";
 
 const Insumos = () => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // Dynamically get user from AuthContext
   const [insumos, setInsumos] = useState([]);
   const [editingInsumo, setEditingInsumo] = useState(null);
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
     unidade_medida: "",
@@ -32,6 +34,11 @@ const Insumos = () => {
   });
   const [feedbackMessage, setFeedbackMessage] = useState(null);
   const [messageType, setMessageType] = useState(null); // 'success', 'error', 'info'
+  const [requestFormData, setRequestFormData] = useState({
+    // New state for request form
+    insumo_id: "",
+    quantidade: "",
+  });
 
   const displayMessage = (message, type) => {
     setFeedbackMessage(message);
@@ -58,14 +65,20 @@ const Insumos = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleRequestFormChange = (e) => {
+    // New handler for request form
+    const { name, value } = e.target;
+    setRequestFormData({ ...requestFormData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (editingInsumo) {
       try {
-        await api.put(`/insumos/${editingInsumo.id}`, form);
+        await api.put(`/insumos/${editingInsumo.id}`, formData);
         displayMessage("Insumo atualizado com sucesso!", "success");
         setEditingInsumo(null);
       } catch (error) {
@@ -79,7 +92,7 @@ const Insumos = () => {
       }
     } else {
       try {
-        await api.post("/insumos", form);
+        await api.post("/insumos", formData);
         displayMessage("Insumo cadastrado com sucesso!", "success");
       } catch (error) {
         console.error("Erro ao cadastrar insumo:", error);
@@ -91,7 +104,7 @@ const Insumos = () => {
         );
       }
     }
-    setForm({
+    setFormData({
       nome: "",
       descricao: "",
       unidade_medida: "",
@@ -100,9 +113,30 @@ const Insumos = () => {
     fetchInsumos(); // Refresh the list
   };
 
+  const handleSubmitRequest = async (e) => {
+    // New submit handler for requests
+    e.preventDefault();
+    try {
+      await api.post("/solicitacoes-insumo", requestFormData); // Assuming this endpoint
+      displayMessage("Solicitação de insumo enviada com sucesso!", "success");
+      setRequestFormData({
+        insumo_id: "",
+        quantidade: "",
+      });
+    } catch (error) {
+      console.error("Erro ao enviar solicitação de insumo:", error);
+      displayMessage(
+        `Erro ao enviar solicitação: ${
+          error.response?.data?.message || error.message
+        }`,
+        "error"
+      );
+    }
+  };
+
   const handleEditClick = (insumo) => {
     setEditingInsumo(insumo);
-    setForm({
+    setFormData({
       nome: insumo.nome,
       descricao: insumo.descricao,
       unidade_medida: insumo.unidade_medida,
@@ -129,7 +163,12 @@ const Insumos = () => {
     }
   };
 
-  if (user?.tipo_usuario !== "gerente_estoque") {
+  // If user is not 'estoquista' or 'gerente_estoque', deny access
+  if (
+    !user ||
+    (user.tipo_usuario !== "estoquista" &&
+      user.tipo_usuario !== "gerente_estoque")
+  ) {
     return (
       <InsumosPageContainer>
         <MessageContainer type="error">
@@ -153,78 +192,128 @@ const Insumos = () => {
         </MessageContainer>
       )}
 
-      <InsumoCard>
-        <h4>
-          {editingInsumo ? <FaEdit /> : <FaPlus />}
-          {editingInsumo ? "Editar Insumo" : "Cadastrar Novo Insumo"}
-        </h4>
-        <form onSubmit={handleSubmit}>
-          <FormGrid>
-            <div className="form-group">
-              <label>Nome do Insumo:</label>
-              <input
-                type="text"
-                name="nome"
-                value={form.nome}
-                onChange={handleFormChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Descrição:</label>
-              <input
-                type="text"
-                name="descricao"
-                value={form.descricao}
-                onChange={handleFormChange}
-              />
-            </div>
-            <div className="form-group">
-              <label>Unidade de Medida:</label>
-              <input
-                type="text"
-                name="unidade_medida"
-                value={form.unidade_medida}
-                onChange={handleFormChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Local de Armazenamento:</label>
-              <input
-                type="text"
-                name="local_armazenamento"
-                value={form.local_armazenamento}
-                onChange={handleFormChange}
-              />
-            </div>
-          </FormGrid>
-          <button type="submit" className="btn btn-primary">
-            {editingInsumo ? "Atualizar Insumo" : "Cadastrar Insumo"}
-          </button>
-          {editingInsumo && (
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => {
-                setEditingInsumo(null);
-                setForm({
-                  nome: "",
-                  descricao: "",
-                  unidade_medida: "",
-                  local_armazenamento: "",
-                });
-                displayMessage("Edição cancelada.", "info");
-              }}
-            >
-              Cancelar Edição
+      {/* Estoquista: Form for adding/editing insumos */}
+      {user.tipo_usuario === "estoquista" && (
+        <InsumoCard>
+          <h4>
+            {editingInsumo ? <FaEdit /> : <FaPlus />}
+            {editingInsumo ? "Editar Insumo" : "Cadastrar Novo Insumo"}
+          </h4>
+          <form onSubmit={handleSubmit}>
+            <FormGrid>
+              <div className="form-group">
+                <label>Nome do Insumo:</label>
+                <input
+                  type="text"
+                  name="nome"
+                  value={formData.nome}
+                  onChange={handleFormChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Descrição:</label>
+                <input
+                  type="text"
+                  name="descricao"
+                  value={formData.descricao}
+                  onChange={handleFormChange}
+                />
+              </div>
+              <div className="form-group">
+                <label>Unidade de Medida:</label>
+                <input
+                  type="text"
+                  name="unidade_medida"
+                  value={formData.unidade_medida}
+                  onChange={handleFormChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Local de Armazenamento:</label>
+                <input
+                  type="text"
+                  name="local_armazenamento"
+                  value={formData.local_armazenamento}
+                  onChange={handleFormChange}
+                />
+              </div>
+            </FormGrid>
+            <button type="submit" className="btn btn-primary">
+              {editingInsumo ? "Atualizar Insumo" : "Cadastrar Insumo"}
             </button>
-          )}
-        </form>
-      </InsumoCard>
+            {editingInsumo && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setEditingInsumo(null);
+                  setFormData({
+                    nome: "",
+                    descricao: "",
+                    unidade_medida: "",
+                    local_armazenamento: "",
+                  });
+                  displayMessage("Edição cancelada.", "info");
+                }}
+              >
+                Cancelar Edição
+              </button>
+            )}
+          </form>
+        </InsumoCard>
+      )}
+
+      {/* Gerente de Estoque: Form for requesting insumos */}
+      {user.tipo_usuario === "gerente_estoque" && (
+        <InsumoCard>
+          <h4>
+            <FaClipboardList /> Solicitar Insumo
+          </h4>
+          <form onSubmit={handleSubmitRequest}>
+            <FormGrid>
+              <div className="form-group">
+                <label htmlFor="insumo_id">Selecione o Insumo</label>
+                <select
+                  id="insumo_id"
+                  name="insumo_id"
+                  value={requestFormData.insumo_id}
+                  onChange={handleRequestFormChange}
+                  required
+                >
+                  <option value="">-- Selecione --</option>
+                  {insumos.map((insumo) => (
+                    <option key={insumo.id} value={insumo.id}>
+                      {insumo.nome} ({insumo.unidade_medida})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="quantidade">Quantidade Solicitada</label>
+                <input
+                  type="number"
+                  id="quantidade"
+                  name="quantidade"
+                  value={requestFormData.quantidade}
+                  onChange={handleRequestFormChange}
+                  min="1"
+                  required
+                />
+              </div>
+            </FormGrid>
+            <button type="submit" className="btn btn-primary">
+              Enviar Solicitação
+            </button>
+          </form>
+        </InsumoCard>
+      )}
 
       <InsumoCard>
-        <h4>Lista de Insumos Cadastrados</h4>
+        <h4>
+          <FaBoxOpen /> Lista de Insumos Cadastrados
+        </h4>
         <TableContainer>
           <table>
             <thead>
@@ -234,7 +323,8 @@ const Insumos = () => {
                 <th>Descrição</th>
                 <th>Unidade de Medida</th>
                 <th>Local de Armazenamento</th>
-                <th>Ações</th>
+                {user.tipo_usuario === "estoquista" && <th>Ações</th>}{" "}
+                {/* Actions column only for Estoquista */}
               </tr>
             </thead>
             <tbody>
@@ -246,29 +336,33 @@ const Insumos = () => {
                     <td>{insumo.descricao || "N/A"}</td>
                     <td>{insumo.unidade_medida || "N/A"}</td>
                     <td>{insumo.local_armazenamento || "N/A"}</td>
-                    <td>
-                      <ButtonGroup>
-                        <button
-                          className="btn btn-info"
-                          onClick={() => handleEditClick(insumo)}
-                          title="Editar Insumo"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => handleDeleteInsumo(insumo.id)}
-                          title="Excluir Insumo"
-                        >
-                          <FaTrash />
-                        </button>
-                      </ButtonGroup>
-                    </td>
+                    {user.tipo_usuario === "estoquista" && ( // Action buttons only for Estoquista
+                      <td>
+                        <ButtonGroup>
+                          <button
+                            className="btn btn-info"
+                            onClick={() => handleEditClick(insumo)}
+                            title="Editar Insumo"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => handleDeleteInsumo(insumo.id)}
+                            title="Excluir Insumo"
+                          >
+                            <FaTrash />
+                          </button>
+                        </ButtonGroup>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6">
+                  <td colSpan={user.tipo_usuario === "estoquista" ? "6" : "5"}>
+                    {" "}
+                    {/* Adjust colspan based on role */}
                     <NoDataMessage>Nenhum insumo cadastrado.</NoDataMessage>
                   </td>
                 </tr>

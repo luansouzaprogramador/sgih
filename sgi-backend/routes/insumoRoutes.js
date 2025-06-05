@@ -14,7 +14,8 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+// Apenas 'estoquista' pode criar insumos
+router.post('/', authenticateToken, authorizeRoles(['estoquista']), async (req, res) => {
   const { nome, descricao, unidade_medida, local_armazenamento } = req.body;
   try {
     const [result] = await pool.execute(
@@ -28,7 +29,8 @@ router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (
   }
 });
 
-router.put('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+// Apenas 'estoquista' pode atualizar insumos
+router.put('/:id', authenticateToken, authorizeRoles(['estoquista']), async (req, res) => {
   const { id } = req.params;
   const { nome, descricao, unidade_medida, local_armazenamento } = req.body;
 
@@ -49,7 +51,8 @@ router.put('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async
   }
 });
 
-router.delete('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
+// Apenas 'estoquista' pode excluir insumos
+router.delete('/:id', authenticateToken, authorizeRoles(['estoquista']), async (req, res) => {
   const { id } = req.params;
 
   try {

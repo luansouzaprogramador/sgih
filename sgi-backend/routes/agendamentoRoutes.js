@@ -1,11 +1,12 @@
 const express = require('express');
 const { pool } = require('../database');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
-const { checkAndCreateAlerts } = require('../utils/alertService'); // We'll use this after transfer
+const { checkAndCreateAlerts } = require('../utils/alertService');
 
 const router = express.Router();
 
-router.get('/:unidadeId?', authenticateToken, async (req, res) => {
+// Route for fetching agendamentos for a specific unit (with unidadeId)
+router.get('/:unidadeId', authenticateToken, async (req, res) => {
   const { unidadeId } = req.params;
   try {
     let query = `
@@ -26,9 +27,40 @@ router.get('/:unidadeId?', authenticateToken, async (req, res) => {
     if (req.user.tipo_usuario === 'estoquista') {
       query += ` WHERE a.unidade_origem_id = ? OR a.unidade_destino_id = ?`;
       params.push(req.user.unidade_id, req.user.unidade_id);
-    } else if (unidadeId) {
+    } else { // Assume it's a manager or other role when unidadeId is provided
       query += ` WHERE a.unidade_origem_id = ? OR a.unidade_destino_id = ?`;
       params.push(unidadeId, unidadeId);
+    }
+    query += ` GROUP BY a.id ORDER BY a.data_agendamento DESC`;
+    const [rows] = await pool.execute(query, params);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching agendamentos:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Route for fetching all agendamentos (without unidadeId)
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    let query = `
+      SELECT a.*,
+             GROUP_CONCAT(ai.quantidade, 'x ', i.nome, ' (Lote: ', l.numero_lote, ')') AS itens_agendados_str,
+             uo.nome AS unidade_origem_nome,
+             ud.nome AS unidade_destino_nome,
+             u.nome AS responsavel_agendamento_nome
+      FROM agendamentos a
+      JOIN unidades_hospitalares uo ON a.unidade_origem_id = uo.id
+      JOIN unidades_hospitalares ud ON a.unidade_destino_id = ud.id
+      JOIN usuarios u ON a.responsavel_agendamento_id = u.id
+      LEFT JOIN agendamento_itens ai ON a.id = ai.agendamento_id
+      LEFT JOIN lotes l ON ai.lote_id = l.id
+      LEFT JOIN insumos i ON l.insumo_id = i.id
+    `;
+    const params = [];
+    if (req.user.tipo_usuario === 'estoquista') {
+      query += ` WHERE a.unidade_origem_id = ? OR a.unidade_destino_id = ?`;
+      params.push(req.user.unidade_id, req.user.unidade_id);
     }
     query += ` GROUP BY a.id ORDER BY a.data_agendamento DESC`;
     const [rows] = await pool.execute(query, params);

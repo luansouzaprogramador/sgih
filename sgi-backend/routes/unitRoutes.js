@@ -31,7 +31,6 @@ router.post('/', authenticateToken, authorizeRoles(['gerente_estoque']), async (
 router.put('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), async (req, res) => {
   const { id } = req.params;
   const { nome, endereco, telefone, email } = req.body;
-
   try {
     const [result] = await pool.execute(
       'UPDATE unidades_hospitalares SET nome = ?, endereco = ?, telefone = ?, email = ? WHERE id = ?',
@@ -53,14 +52,27 @@ router.delete('/:id', authenticateToken, authorizeRoles(['gerente_estoque']), as
   const { id } = req.params;
 
   try {
-    const [checkUsage] = await pool.execute(
+    // Check for associated users
+    const [checkUserUsage] = await pool.execute(
       'SELECT COUNT(*) AS count FROM usuarios WHERE unidade_id = ?',
       [id]
     );
 
-    if (checkUsage[0].count > 0) {
+    if (checkUserUsage[0].count > 0) {
       return res.status(400).json({
         message: 'Não é possível excluir. Esta unidade está vinculada a usuários.'
+      });
+    }
+
+    // Check for associated lots
+    const [checkLoteUsage] = await pool.execute(
+      'SELECT COUNT(*) AS count FROM lotes WHERE unidade_id = ?',
+      [id]
+    );
+
+    if (checkLoteUsage[0].count > 0) {
+      return res.status(400).json({
+        message: 'Não é possível excluir. Esta unidade está vinculada a lotes.'
       });
     }
 
