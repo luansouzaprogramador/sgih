@@ -133,14 +133,16 @@ const Sidebar = () => {
             <FaCalendarAlt /> Agendamentos
           </Link>
         </NavItem>
-        <NavItem>
-          <Link
-            to="/relatorios"
-            className={location.pathname === "/relatorios" ? "active" : ""}
-          >
-            <FaChartBar /> Relatórios
-          </Link>
-        </NavItem>
+        {isManager && ( // Conditionally render based on user type
+          <NavItem>
+            <Link
+              to="/relatorios"
+              className={location.pathname === "/relatorios" ? "active" : ""}
+            >
+              <FaChartBar /> Relatórios
+            </Link>
+          </NavItem>
+        )}
         <NavItem>
           <Link
             to="/insumos"

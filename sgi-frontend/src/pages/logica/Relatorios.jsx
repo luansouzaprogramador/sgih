@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
-import { FaFilePdf, FaFileCsv, FaChartLine } from "react-icons/fa";
-import * as XLSX from "xlsx"; // Importa a biblioteca xlsx
+import {
+  FaFilePdf,
+  FaFileCsv,
+  FaChartLine,
+  FaExclamationCircle,
+} from "react-icons/fa"; // Import FaExclamationCircle
+import * as XLSX from "xlsx";
 import {
   ReportsPageContainer,
   Title,
@@ -11,7 +16,9 @@ import {
   TableContainer,
   DownloadButton,
   NoDataMessage,
-} from "../style/RelatoriosStyles"; // Import styled components
+} from "../style/RelatoriosStyles";
+// Import MessageContainer from ConfiguracoesStyles for consistent styling
+import { MessageContainer } from "../style/ConfiguracoesStyles";
 
 const Relatorios = () => {
   const { user } = useAuth();
@@ -35,7 +42,6 @@ const Relatorios = () => {
         fetchCriticalStock(user.unidade_id);
       }
     } else if (user?.tipo_usuario === "gerente_estoque") {
-      // For manager, fetch all if no unit selected
       if (reportType === "movimentacoes") {
         fetchMovements(selectedUnit, startDate, endDate);
       } else if (reportType === "estoque_critico") {
@@ -83,7 +89,7 @@ const Relatorios = () => {
     }
     try {
       const response = await api.get(url);
-      setMovements(response.data); // Re-using movements state for critical stock data
+      setMovements(response.data);
     } catch (error) {
       console.error("Error fetching critical stock:", error);
       setMovements([]);
@@ -127,10 +133,21 @@ const Relatorios = () => {
     XLSX.writeFile(wb, `${filename}.xlsx`);
   };
 
-  // Mock function for PDF export (requires a library like jsPDF)
   const exportToPDF = () => {
     alert("Funcionalidade de exportar para PDF não implementada ainda.");
   };
+
+  // Conditional rendering based on user type
+  if (user?.tipo_usuario !== "gerente_estoque") {
+    return (
+      <ReportsPageContainer>
+        <MessageContainer type="error">
+          <FaExclamationCircle /> Você não tem permissão para acessar esta
+          página.
+        </MessageContainer>
+      </ReportsPageContainer>
+    );
+  }
 
   return (
     <ReportsPageContainer>

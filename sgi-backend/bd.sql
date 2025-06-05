@@ -24,6 +24,20 @@ CREATE TABLE IF NOT EXISTS usuarios (
     FOREIGN KEY (unidade_id) REFERENCES unidades_hospitalares(id)
 );
 
+use sgi_saude;
+CREATE TABLE IF NOT EXISTS usuarios_teste (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    senha VARCHAR(255) NOT NULL, -- Hashed password
+    tipo_usuario ENUM('almoxarife_central', 'almoxarife_local', 'gestor', 'profissionais_saude') NOT NULL,
+    unidade_id INT, -- Associate user with a specific hospital unit
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (unidade_id) REFERENCES unidades_hospitalares(id)
+);
+
+
 -- Table for Insumos (Supplies)
 CREATE TABLE IF NOT EXISTS insumos (
     id INT AUTO_INCREMENT PRIMARY KEY,

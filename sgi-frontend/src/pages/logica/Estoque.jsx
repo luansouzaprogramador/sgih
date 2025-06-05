@@ -435,7 +435,7 @@ const Estoque = () => {
                     }
                   </td>
                   <td>
-                    <StatusIndicator statusType={getStatus(lote)}>
+                    <StatusIndicator $statusType={getStatus(lote)}>
                       {getStatus(lote)}
                     </StatusIndicator>
                   </td>
