@@ -14,8 +14,8 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Apenas 'almoxarife_central' pode criar insumos
-router.post('/', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
+// Apenas 'almoxarife_central' or 'almoxarife_local' pode criar insumos
+router.post('/', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   const { nome, descricao, unidade_medida, local_armazenamento } = req.body;
   try {
     const [result] = await pool.execute(
@@ -29,8 +29,8 @@ router.post('/', authenticateToken, authorizeRoles(['almoxarife_central']), asyn
   }
 });
 
-// Apenas 'almoxarife_central' pode atualizar insumos
-router.put('/:id', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
+// Apenas 'almoxarife_central' or 'almoxarife_local' pode atualizar insumos
+router.put('/:id', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   const { id } = req.params;
   const { nome, descricao, unidade_medida, local_armazenamento } = req.body;
 
@@ -51,8 +51,8 @@ router.put('/:id', authenticateToken, authorizeRoles(['almoxarife_central']), as
   }
 });
 
-// Apenas 'almoxarife_central' pode excluir insumos
-router.delete('/:id', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
+// Apenas 'almoxarife_central' or 'almoxarife_local' pode excluir insumos
+router.delete('/:id', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   const { id } = req.params;
 
   try {

@@ -31,10 +31,10 @@ app.use('/api/unidades', unidadeRoutes);
 app.use('/api/insumos', insumoRoutes);
 app.use('/api/lotes', loteRoutes);
 app.use('/api/movimentacoes', movimentacaoRoutes);
-app.use('/api/agendamentos', agendamentoRoutes);
+app.use('/api/agendamentos', agendamentoRoutes); // Already present and correct
 app.use('/api/alertas', alertRoutes);
 app.use('/api/relatorios', reportRoutes);
-app.use('/api/solicitacoes-insumo', solicitacaoRoutes); // <--- NEW
+app.use('/api/solicitacoes', solicitacaoRoutes); // <--- NEW
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

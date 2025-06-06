@@ -38,35 +38,56 @@ const Dashboard = () => {
       if (!user) return;
 
       try {
-        const insumosRes = await api.get("/insumos");
-        const totalInsumos = insumosRes.data.length;
+        let totalInsumos = 0;
+        let pendingDeliveries = 0;
+        let criticalStockAlertsCount = 0;
+        let recentMovements = [];
+        let alerts = [];
 
-        const agendamentosEndpoint =
+        // Logic for 'almoxarife_local' and 'almoxarife_central'
+        if (
+          user.tipo_usuario === "almoxarife_local" ||
           user.tipo_usuario === "almoxarife_central"
-            ? `/agendamentos/${user.unidade_id}`
-            : "/agendamentos/";
+        ) {
+          const insumosRes = await api.get("/insumos");
+          totalInsumos = insumosRes.data.length;
 
-        const agendamentosRes = await api.get(agendamentosEndpoint);
-        const pendingDeliveries = agendamentosRes.data.filter(
-          (a) => a.status === "pendente"
-        ).length;
+          const agendamentosEndpoint =
+            user.tipo_usuario === "almoxarife_local"
+              ? `/agendamentos/${user.unidade_id}`
+              : "/agendamentos/";
 
-        const alertsRes = await api.get(`/alertas/${user.unidade_id}`);
-        const criticalStockAlertsCount = alertsRes.data.filter(
-          (a) => a.tipo === "estoque_critico"
-        ).length;
+          const agendamentosRes = await api.get(agendamentosEndpoint);
+          pendingDeliveries = agendamentosRes.data.filter(
+            (a) => a.status === "pendente"
+          ).length;
 
-        const movementsRes = await api.get(
-          `/movimentacoes/${user.unidade_id}?periodo=30`
-        );
-        const recentMovements = movementsRes.data.slice(0, 5);
+          const alertsEndpoint =
+            user.tipo_usuario === "almoxarife_local"
+              ? `/alertas/${user.unidade_id}`
+              : "/alertas/"; // For central, fetch all alerts
+
+          const alertsRes = await api.get(alertsEndpoint);
+          criticalStockAlertsCount = alertsRes.data.filter(
+            (a) => a.tipo === "estoque_critico"
+          ).length;
+          alerts = alertsRes.data;
+
+          const movementsEndpoint =
+            user.tipo_usuario === "almoxarife_local"
+              ? `/movimentacoes/${user.unidade_id}?periodo=30`
+              : `/movimentacoes/?periodo=30`; // For central, fetch all movements
+
+          const movementsRes = await api.get(movementsEndpoint);
+          recentMovements = movementsRes.data.slice(0, 5);
+        }
 
         setStats({
           totalInsumos,
           pendingDeliveries,
           criticalStockAlerts: criticalStockAlertsCount,
           recentMovements,
-          alerts: alertsRes.data,
+          alerts,
         });
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
@@ -98,108 +119,127 @@ const Dashboard = () => {
         Bem-vindo, <span>{user.nome}!</span>
       </WelcomeMessage>
 
-      <SectionTitle>Visão Geral</SectionTitle>
-      <StatsGrid>
-        <StatCard color="#007bff">
-          <FaWarehouse className="icon" />
-          <div className="value">{stats.totalInsumos}</div>
-          <div className="label">Total de Insumos</div>
-        </StatCard>
-        <StatCard color="#28a745">
-          <FaCalendarCheck className="icon" />
-          <div className="value">{stats.pendingDeliveries}</div>
-          <div className="label">Entregas Pendentes</div>
-        </StatCard>
-        <StatCard color="#ffc107">
-          <FaExclamationTriangle className="icon" />
-          <div className="value">{stats.criticalStockAlerts}</div>
-          <div className="label">Alertas de Estoque Crítico</div>
-        </StatCard>
-      </StatsGrid>
+      {user.tipo_usuario === "gestor" && (
+        <>
+          <SectionTitle>Alertas de Solicitação de Insumos</SectionTitle>
+          <Card>
+            <NoDataMessage>
+              Funcionalidade em desenvolvimento: Alertas de solicitação de
+              insumos aparecerão aqui.
+            </NoDataMessage>
+          </Card>
+        </>
+      )}
 
-      <SectionTitle>Alertas Ativos</SectionTitle>
-      <Card>
-        {stats.alerts.length > 0 ? (
-          <AlertList>
-            {stats.alerts.map((alert) => (
-              <AlertItem key={alert.id}>
-                <FaExclamationTriangle />
-                <div>
-                  <strong>
-                    {alert.tipo === "vencimento"
-                      ? "Vencimento"
-                      : alert.tipo === "estoque_critico"
-                      ? "Estoque Crítico"
-                      : "Alerta"}
-                  </strong>
-                  : {alert.mensagem}
-                  {alert.insumo_nome && ` (Insumo: ${alert.insumo_nome})`}
-                  {alert.numero_lote && ` (Lote: ${alert.numero_lote})`}{" "}
-                  <small>
-                    ({new Date(alert.data_alerta).toLocaleString()})
-                  </small>
-                </div>
-              </AlertItem>
-            ))}
-          </AlertList>
-        ) : (
-          <NoDataMessage>Nenhum alerta ativo no momento.</NoDataMessage>
-        )}
-      </Card>
+      {(user.tipo_usuario === "almoxarife_local" ||
+        user.tipo_usuario === "almoxarife_central") && (
+        <>
+          <SectionTitle>Visão Geral</SectionTitle>
+          <StatsGrid>
+            <StatCard color="#007bff">
+              <FaWarehouse className="icon" />
+              <div className="value">{stats.totalInsumos}</div>
+              <div className="label">Total de Insumos</div>
+            </StatCard>
+            <StatCard color="#28a745">
+              <FaCalendarCheck className="icon" />
+              <div className="value">{stats.pendingDeliveries}</div>
+              <div className="label">Entregas Pendentes</div>
+            </StatCard>
+            <StatCard color="#ffc107">
+              <FaExclamationTriangle className="icon" />
+              <div className="value">{stats.criticalStockAlerts}</div>
+              <div className="label">Alertas de Estoque Crítico</div>
+            </StatCard>
+          </StatsGrid>
 
-      <SectionTitle style={{ marginTop: "40px" }}>
-        Últimas Movimentações na sua Unidade
-      </SectionTitle>
-      <Card>
-        {stats.recentMovements.length > 0 ? (
-          <Table>
-            <thead>
-              <tr>
-                <th>Data/Hora</th>
-                <th>Tipo</th>
-                <th>Insumo</th>
-                <th>Lote</th>
-                <th>Quantidade</th>
-                <th>Responsável</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stats.recentMovements.map((movement) => (
-                <tr key={movement.id}>
-                  <td>{new Date(movement.data_hora).toLocaleString()}</td>
-                  <td>
-                    {movement.tipo === "entrada" ? (
-                      <>
-                        <FaArrowRight
-                          style={{ color: "#28a745", marginRight: "5px" }}
-                        />{" "}
-                        Entrada
-                      </>
-                    ) : movement.tipo === "saida" ? (
-                      <>
-                        <FaArrowLeft
-                          style={{ color: "#dc3545", marginRight: "5px" }}
-                        />{" "}
-                        Saída
-                      </>
-                    ) : (
-                      "Transferência"
-                    )}
-                  </td>
-                  <td>{movement.insumo_nome}</td>
-                  <td>{movement.numero_lote}</td>
-                  <td>{movement.quantidade}</td>
-                  <td>{movement.responsavel_nome}</td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ) : (
-          <NoDataMessage>
-            Nenhuma movimentação recente registrada.
-          </NoDataMessage>
-        )}
-      </Card>
+          <SectionTitle>Alertas Ativos</SectionTitle>
+          <Card>
+            {stats.alerts.length > 0 ? (
+              <AlertList>
+                {stats.alerts.map((alert) => (
+                  <AlertItem key={alert.id}>
+                    <FaExclamationTriangle />
+                    <div>
+                      <strong>
+                        {alert.tipo === "vencimento"
+                          ? "Vencimento"
+                          : alert.tipo === "estoque_critico"
+                          ? "Estoque Crítico"
+                          : "Alerta"}
+                      </strong>
+                      : {alert.mensagem}
+                      {alert.insumo_nome && ` (Insumo: ${alert.insumo_nome})`}
+                      {alert.numero_lote &&
+                        ` (Lote: ${alert.numero_lote})`}{" "}
+                      <small>
+                        ({new Date(alert.data_alerta).toLocaleString()})
+                      </small>
+                    </div>
+                  </AlertItem>
+                ))}
+              </AlertList>
+            ) : (
+              <NoDataMessage>Nenhum alerta ativo no momento.</NoDataMessage>
+            )}
+          </Card>
+
+          <SectionTitle style={{ marginTop: "40px" }}>
+            Últimas Movimentações{" "}
+            {user.tipo_usuario === "almoxarife_local" && "na sua Unidade"}
+          </SectionTitle>
+          <Card>
+            {stats.recentMovements.length > 0 ? (
+              <Table>
+                <thead>
+                  <tr>
+                    <th>Data/Hora</th>
+                    <th>Tipo</th>
+                    <th>Insumo</th>
+                    <th>Lote</th>
+                    <th>Quantidade</th>
+                    <th>Responsável</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.recentMovements.map((movement) => (
+                    <tr key={movement.id}>
+                      <td>{new Date(movement.data_hora).toLocaleString()}</td>
+                      <td>
+                        {movement.tipo === "entrada" ? (
+                          <>
+                            <FaArrowRight
+                              style={{ color: "#28a745", marginRight: "5px" }}
+                            />{" "}
+                            Entrada
+                          </>
+                        ) : movement.tipo === "saida" ? (
+                          <>
+                            <FaArrowLeft
+                              style={{ color: "#dc3545", marginRight: "5px" }}
+                            />{" "}
+                            Saída
+                          </>
+                        ) : (
+                          "Transferência"
+                        )}
+                      </td>
+                      <td>{movement.insumo_nome}</td>
+                      <td>{movement.numero_lote}</td>
+                      <td>{movement.quantidade}</td>
+                      <td>{movement.responsavel_nome}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            ) : (
+              <NoDataMessage>
+                Nenhuma movimentação recente registrada.
+              </NoDataMessage>
+            )}
+          </Card>
+        </>
+      )}
     </DashboardContainer>
   );
 };

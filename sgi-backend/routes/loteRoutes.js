@@ -2,18 +2,26 @@ const express = require('express');
 const moment = require('moment');
 const { pool } = require('../database');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
-const { checkAndCreateAlerts } = require('../utils/alertService'); // We'll create this utility
+const { checkAndCreateAlerts } = require('../utils/alertService');
 
 const router = express.Router();
 
 router.get('/:unidadeId', authenticateToken, async (req, res) => {
   const { unidadeId } = req.params;
   try {
-    if (req.user.tipo_usuario === 'almoxarife_central' && req.user.unidade_id != unidadeId) {
-      return res.status(403).send('Access denied.');
+    // Lógica CORRIGIDA:
+    // - Almoxarife Central: Pode ver lotes de QUALQUER unidade.
+    // - Almoxarife Local: Pode ver lotes APENAS de sua própria unidade.
+    // - Gestor: Assume-se que um gestor pode ver todos os lotes, mas para esta rota específica
+    //          que filtra por unidade, ele também pode acessar. Se houver uma rota GET /lotes (sem ID),
+    //          ela teria authorizeRoles(['gestor', 'almoxarife_central']).
+    if (req.user.tipo_usuario === 'almoxarife_local' && req.user.unidade_id != unidadeId) {
+      return res.status(403).send('Acesso negado: Almoxarife local só pode ver lotes de sua própria unidade.');
     }
+    // Para almoxarifes centrais, nenhuma restrição adicional baseada em unidade_id aqui.
+    // Eles devem conseguir buscar lotes para qualquer unidade.
 
-    await checkAndCreateAlerts(unidadeId);
+    await checkAndCreateAlerts(unidadeId); // Certifique-se de que isso funciona para a unidade em questão
 
     const [rows] = await pool.execute(
       'SELECT l.*, i.nome AS insumo_nome FROM lotes l JOIN insumos i ON l.insumo_id = i.id WHERE l.unidade_id = ?',
@@ -31,29 +39,73 @@ router.post('/entrada', authenticateToken, authorizeRoles(['almoxarife_central',
   const responsavel_id = req.user.id;
 
   try {
-    const [result] = await pool.execute(
-      'INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, unidade_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [insumo_id, numero_lote, data_validade, quantidade, quantidade, unidade_id]
-    );
-    const loteId = result.insertId;
+    // Check if the insumo exists
+    const [insumoRows] = await pool.execute('SELECT id FROM insumos WHERE id = ?', [insumo_id]);
+    if (insumoRows.length === 0) {
+      return res.status(404).json({ message: 'Insumo not found.' });
+    }
 
+    // Check if the unit exists
+    const [unitRows] = await pool.execute('SELECT id FROM unidades_hospitalares WHERE id = ?', [unidade_id]);
+    if (unitRows.length === 0) {
+      return res.status(404).json({ message: 'Unit not found.' });
+    }
+
+    // Check if a batch with the same insumo_id, numero_lote, and unidade_id already exists and is active
+    const [existingLotes] = await pool.execute(
+      'SELECT id, quantidade_atual, data_validade, status FROM lotes WHERE insumo_id = ? AND numero_lote = ? AND unidade_id = ? AND status = "ativo"',
+      [insumo_id, numero_lote, unidade_id]
+    );
+
+    if (existingLotes.length > 0) {
+      // If lot exists and is active, update its quantity and data_validade if newer
+      const existingLote = existingLotes[0];
+      const newQuantity = existingLote.quantidade_atual + quantidade;
+
+      let updateQuery = 'UPDATE lotes SET quantidade_atual = ?';
+      const updateParams = [newQuantity];
+
+      // Only update data_validade if the new one is later than the existing one
+      if (moment(data_validade).isAfter(moment(existingLote.data_validade))) {
+        updateQuery += ', data_validade = ?';
+        updateParams.push(data_validade);
+      }
+
+      updateQuery += ' WHERE id = ?';
+      updateParams.push(existingLote.id);
+
+      await pool.execute(updateQuery, updateParams);
+      res.status(200).json({ message: 'Lote atualizado com sucesso e quantidade adicionada.', loteId: existingLote.id });
+    } else {
+      // If no active lot exists, insert a new one
+      const [result] = await pool.execute(
+        'INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, status, unidade_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [insumo_id, numero_lote, data_validade, quantidade, quantidade, 'ativo', unidade_id]
+      );
+      res.status(201).json({ message: 'Lote criado com sucesso.', loteId: result.insertId });
+    }
+
+    // Register movimentacao
+    const lote_id = existingLotes.length > 0 ? existingLotes[0].id : result.insertId;
     await pool.execute(
-      'INSERT INTO movimentacoes (lote_id, tipo, quantidade, responsavel_id, unidade_origem_id) VALUES (?, ?, ?, ?, ?)',
-      [loteId, 'entrada', quantidade, responsavel_id, unidade_id]
+      'INSERT INTO movimentacoes (lote_id, tipo, quantidade, responsavel_id, unidade_destino_id) VALUES (?, ?, ?, ?, ?)',
+      [lote_id, 'entrada', quantidade, responsavel_id, unidade_id]
     );
 
-    await checkAndCreateAlerts(unidade_id);
-
-    res.status(201).json({ message: 'Batch added and movement registered successfully', loteId });
   } catch (error) {
-    console.error('Error adding batch:', error);
+    console.error('Error creating/updating lote (entrada):', error);
     res.status(500).json({ message: 'Server error.' });
   }
 });
 
-router.post('/saida', authenticateToken, authorizeRoles(['almoxarife_central', 'gestor']), async (req, res) => {
+router.post('/saida', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   const { lote_id, quantidade_saida, unidade_origem_id } = req.body;
   const responsavel_id = req.user.id;
+
+  // Ensure almoxarife_local can only manage lots from their own unit
+  if (req.user.tipo_usuario === 'almoxarife_local' && req.user.unidade_id !== unidade_origem_id) {
+    return res.status(403).json({ message: 'Acesso negado. Almoxarife local só pode registrar saídas da sua própria unidade.' });
+  }
 
   try {
     const [loteRows] = await pool.execute('SELECT * FROM lotes WHERE id = ? AND unidade_id = ?', [lote_id, unidade_origem_id]);
@@ -83,10 +135,33 @@ router.post('/saida', authenticateToken, authorizeRoles(['almoxarife_central', '
       'INSERT INTO movimentacoes (lote_id, tipo, quantidade, responsavel_id, unidade_origem_id) VALUES (?, ?, ?, ?, ?)',
       [lote_id, 'saida', quantidade_saida, responsavel_id, unidade_origem_id]
     );
-    await checkAndCreateAlerts(unidade_origem_id);
-    res.json({ message: 'Supply quantity updated and movement registered successfully', novaQuantidade });
+
+    res.json({ message: 'Saída de lote registrada com sucesso.', newQuantity: novaQuantidade });
   } catch (error) {
-    console.error('Error updating batch quantity:', error);
+    console.error('Error registering lote exit:', error);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+router.put('/:id/status', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body; // 'ativo', 'bloqueado', 'vencido'
+
+  if (!['ativo', 'bloqueado', 'vencido'].includes(status)) {
+    return res.status(400).json({ message: 'Invalid status.' });
+  }
+
+  try {
+    const [result] = await pool.execute(
+      'UPDATE lotes SET status = ? WHERE id = ?',
+      [status, id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Lote not found.' });
+    }
+    res.json({ message: 'Status do lote atualizado com sucesso.' });
+  } catch (error) {
+    console.error('Error updating lote status:', error);
     res.status(500).json({ message: 'Server error.' });
   }
 });

@@ -85,7 +85,7 @@ const Estoque = () => {
   };
 
   const fetchLotes = async (unitId) => {
-    if (!unitId && user?.tipo_usuario !== "gestor") {
+    if (!unitId && user?.tipo_usuario !== "almoxarife_central") {
       setLotes([]);
       return;
     }
@@ -115,8 +115,8 @@ const Estoque = () => {
         ...prev,
         unidade_origem_id: user.unidade_id,
       }));
-      setFilterUnit(user.unidade_id); // Set filter for almoxarife_central to their unit
-    } else if (user?.tipo_usuario === "gestor") {
+      setFilterUnit(user.unidade_id); // Set filter for almoxarife_local to their unit
+    } else if (user?.tipo_usuario === "almoxarife_central") {
       setFilterUnit(""); // Default to no specific unit filter for manager (fetches all if backend supports)
       fetchLotes(""); // Fetch all lots for manager by default if API supports
     }
@@ -124,7 +124,7 @@ const Estoque = () => {
 
   useEffect(() => {
     const unitToFetch =
-      user?.tipo_usuario === "gestor" ? filterUnit : selectedUnit;
+      user?.tipo_usuario === "almoxarife_central" ? filterUnit : selectedUnit;
     fetchLotes(unitToFetch);
   }, [filterUnit, selectedUnit, user]);
 
@@ -147,7 +147,9 @@ const Estoque = () => {
         quantidade: "",
         unidade_id: user?.unidade_id || "",
       });
-      fetchLotes(user?.tipo_usuario === "gestor" ? filterUnit : selectedUnit); // Refresh data
+      fetchLotes(
+        user?.tipo_usuario === "almoxarife_central" ? filterUnit : selectedUnit
+      ); // Refresh data
     } catch (error) {
       console.error("Erro ao adicionar insumo:", error);
       displayMessage(
@@ -173,7 +175,9 @@ const Estoque = () => {
         quantidade_saida: "",
         unidade_origem_id: user?.unidade_id || "",
       });
-      fetchLotes(user?.tipo_usuario === "gestor" ? filterUnit : selectedUnit); // Refresh data
+      fetchLotes(
+        user?.tipo_usuario === "almoxarife_central" ? filterUnit : selectedUnit
+      ); // Refresh data
     } catch (error) {
       console.error("Erro ao remover insumo:", error);
       displayMessage(
@@ -205,6 +209,18 @@ const Estoque = () => {
       lote.numero_lote.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Access restriction for 'gestor' user
+  if (user?.tipo_usuario === "gestor") {
+    return (
+      <StockPageContainer>
+        <MessageContainer type="error">
+          <FaExclamationCircle /> Você não tem permissão para acessar esta
+          página.
+        </MessageContainer>
+      </StockPageContainer>
+    );
+  }
+
   return (
     <StockPageContainer>
       <Title>Gestão de Estoque</Title>
@@ -231,7 +247,7 @@ const Estoque = () => {
                 onChange={(e) =>
                   setAddForm({ ...addForm, unidade_id: e.target.value })
                 }
-                disabled={user?.tipo_usuario === "almoxarife_central"}
+                disabled={user?.tipo_usuario === "almoxarife_local"}
                 required
               >
                 <option value="">Selecione a Unidade</option>
@@ -315,7 +331,7 @@ const Estoque = () => {
                     unidade_origem_id: e.target.value,
                   })
                 }
-                disabled={user?.tipo_usuario === "almoxarife_central"}
+                disabled={user?.tipo_usuario === "almoxarife_local"}
                 required
               >
                 <option value="">Selecione a Unidade</option>
@@ -341,7 +357,7 @@ const Estoque = () => {
                     (l) =>
                       l.unidade_id ===
                       parseInt(
-                        user?.tipo_usuario === "gestor"
+                        user?.tipo_usuario === "almoxarife_central"
                           ? removeForm.unidade_origem_id
                           : selectedUnit
                       )
@@ -384,7 +400,7 @@ const Estoque = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          {user?.tipo_usuario === "gestor" && (
+          {user?.tipo_usuario === "almoxarife_central" && (
             <select
               value={filterUnit}
               onChange={(e) => setFilterUnit(e.target.value)}

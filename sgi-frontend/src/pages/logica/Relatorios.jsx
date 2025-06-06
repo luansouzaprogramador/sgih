@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
+import { MessageContainer } from "../style/ConfiguracoesStyles";
 import {
   FaFilePdf,
   FaFileCsv,
@@ -17,8 +18,6 @@ import {
   DownloadButton,
   NoDataMessage,
 } from "../style/RelatoriosStyles";
-// Import MessageContainer from ConfiguracoesStyles for consistent styling
-import { MessageContainer } from "../style/ConfiguracoesStyles";
 
 const Relatorios = () => {
   const { user } = useAuth();
@@ -34,14 +33,14 @@ const Relatorios = () => {
   }, []);
 
   useEffect(() => {
-    if (user?.tipo_usuario === "almoxarife_central" && user?.unidade_id) {
+    if (user?.tipo_usuario === "almoxarife_local" && user?.unidade_id) {
       setSelectedUnit(user.unidade_id);
       if (reportType === "movimentacoes") {
         fetchMovements(user.unidade_id, startDate, endDate);
       } else if (reportType === "estoque_critico") {
         fetchCriticalStock(user.unidade_id);
       }
-    } else if (user?.tipo_usuario === "gestor") {
+    } else if (user?.tipo_usuario === "almoxarife_central") {
       if (reportType === "movimentacoes") {
         fetchMovements(selectedUnit, startDate, endDate);
       } else if (reportType === "estoque_critico") {
@@ -138,7 +137,7 @@ const Relatorios = () => {
   };
 
   // Conditional rendering based on user type
-  if (user?.tipo_usuario !== "gestor") {
+  if (user?.tipo_usuario !== "almoxarife_central") {
     return (
       <ReportsPageContainer>
         <MessageContainer type="error">
@@ -166,7 +165,7 @@ const Relatorios = () => {
             <option value="estoque_critico">Estoque Crítico</option>
           </select>
 
-          {user?.tipo_usuario === "gestor" && (
+          {user?.tipo_usuario === "almoxarife_central" && (
             <select
               value={selectedUnit}
               onChange={(e) => setSelectedUnit(e.target.value)}

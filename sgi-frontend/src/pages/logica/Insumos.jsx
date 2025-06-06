@@ -163,10 +163,11 @@ const Insumos = () => {
     }
   };
 
-  // If user is not 'almoxarife_central' or 'gestor', deny access
+  // If user is not 'almoxarife_central' or 'almoxarife_local' or 'gestor', deny access
   if (
     !user ||
     (user.tipo_usuario !== "almoxarife_central" &&
+      user.tipo_usuario !== "almoxarife_local" &&
       user.tipo_usuario !== "gestor")
   ) {
     return (
@@ -192,8 +193,9 @@ const Insumos = () => {
         </MessageContainer>
       )}
 
-      {/* almoxarife_central: Form for adding/editing insumos */}
-      {user.tipo_usuario === "almoxarife_central" && (
+      {/* almoxarife_central || almoxarife_local: Form for adding/editing insumos */}
+      {(user.tipo_usuario === "almoxarife_central" ||
+        user.tipo_usuario === "almoxarife_local") && (
         <InsumoCard>
           <h4>
             {editingInsumo ? <FaEdit /> : <FaPlus />}
@@ -323,10 +325,11 @@ const Insumos = () => {
                 <th>Descrição</th>
                 <th>Unidade de Medida</th>
                 <th>Local de Armazenamento</th>
-                {user.tipo_usuario === "almoxarife_central" && (
+                {(user.tipo_usuario === "almoxarife_central" ||
+                  user.tipo_usuario === "almoxarife_local") && (
                   <th>Ações</th>
                 )}{" "}
-                {/* Actions column only for almoxarife_central */}
+                {/* Actions column only for almoxarife_central ou almoxarife_local */}
               </tr>
             </thead>
             <tbody>
@@ -338,7 +341,8 @@ const Insumos = () => {
                     <td>{insumo.descricao || "N/A"}</td>
                     <td>{insumo.unidade_medida || "N/A"}</td>
                     <td>{insumo.local_armazenamento || "N/A"}</td>
-                    {user.tipo_usuario === "almoxarife_central" && ( // Action buttons only for almoxarife_central
+                    {(user.tipo_usuario === "almoxarife_central" ||
+                      user.tipo_usuario === "almoxarife_local") && ( // Action buttons only for almoxarife_central or almoxarife_local
                       <td>
                         <ButtonGroup>
                           <button
@@ -364,7 +368,10 @@ const Insumos = () => {
                 <tr>
                   <td
                     colSpan={
-                      user.tipo_usuario === "almoxarife_central" ? "6" : "5"
+                      user.tipo_usuario === "almoxarife_central" ||
+                      user.tipo_usuario === "almoxarife_local"
+                        ? "6"
+                        : "5"
                     }
                   >
                     {" "}

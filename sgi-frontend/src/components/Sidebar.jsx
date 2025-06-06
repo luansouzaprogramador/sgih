@@ -1,3 +1,4 @@
+// (Conteúdo do Sidebar.jsx permanece o mesmo da sua última versão)
 import React from "react";
 import styled from "styled-components";
 import { Link, useLocation } from "react-router-dom";
@@ -100,6 +101,9 @@ const Sidebar = () => {
   const location = useLocation();
 
   const isManager = user && user.tipo_usuario === "gestor";
+  const isAlmoxarifeCentral =
+    user && user.tipo_usuario === "almoxarife_central";
+  const isAlmoxarifeLocal = user && user.tipo_usuario === "almoxarife_local";
 
   return (
     <SidebarContainer>
@@ -117,23 +121,28 @@ const Sidebar = () => {
             <FaTachometerAlt /> Dashboard
           </Link>
         </NavItem>
-        <NavItem>
-          <Link
-            to="/estoque"
-            className={location.pathname === "/estoque" ? "active" : ""}
-          >
-            <FaWarehouse /> Estoque
-          </Link>
-        </NavItem>
-        <NavItem>
-          <Link
-            to="/agendamentos"
-            className={location.pathname === "/agendamentos" ? "active" : ""}
-          >
-            <FaCalendarAlt /> Agendamentos
-          </Link>
-        </NavItem>
-        {isManager && ( // Conditionally render based on user type
+
+        {(isAlmoxarifeCentral || isAlmoxarifeLocal) && (
+          <NavItem>
+            <Link
+              to="/estoque"
+              className={location.pathname === "/estoque" ? "active" : ""}
+            >
+              <FaWarehouse /> Estoque
+            </Link>
+          </NavItem>
+        )}
+        {isAlmoxarifeCentral && (
+          <NavItem>
+            <Link
+              to="/agendamentos"
+              className={location.pathname === "/agendamentos" ? "active" : ""}
+            >
+              <FaCalendarAlt /> Agendamentos
+            </Link>
+          </NavItem>
+        )}
+        {isAlmoxarifeCentral && (
           <NavItem>
             <Link
               to="/relatorios"
