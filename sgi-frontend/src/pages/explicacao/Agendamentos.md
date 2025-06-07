@@ -59,30 +59,3 @@ Assumindo que você tem um projeto React configurado:
     yarn add react react-router-dom react-icons react-datepicker styled-components axios
     ```
 3.  Garanta que seus arquivos `api.js` e `AuthContext.js` estejam corretamente configurados e acessíveis.
-
-## Uso
-
-Importe e utilize o componente `Agendamentos` em sua aplicação, geralmente dentro de um sistema de roteamento que controle o acesso com base no perfil do usuário:
-
-```jsx
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Agendamentos from "./components/Agendamentos"; // Ajuste o caminho conforme necessário
-import Dashboard from "./components/Dashboard"; // Exemplo
-import Login from "./components/Login"; // Exemplo
-
-function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/agendamentos" element={<Agendamentos />} />
-        {/* Outras rotas */}
-      </Routes>
-    </Router>
-  );
-}
-
-export default App;
-```

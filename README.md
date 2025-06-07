@@ -169,6 +169,15 @@ Este sistema é construído utilizando as seguintes tecnologias principais no fr
 - **`react-datepicker`**: Para seleção de datas em formulários.
 - **`xlsx`**: Para funcionalidades de exportação de dados para Excel.
 
+## Comunicação com a API (`api.js`)
+
+O arquivo `api.js` é o ponto central para todas as requisições HTTP do frontend para o backend, utilizando a biblioteca Axios. Ele é configurado para:
+
+- **URL Base**: Define o `baseURL` para todas as requisições, obtendo-o de uma variável de ambiente (`import.meta.env.VITE_API_BASE_URL`), o que facilita a configuração em diferentes ambientes (desenvolvimento, produção).
+- **Headers Padrão**: Garante que todas as requisições enviem o `Content-Type: application/json`.
+- **Interceptor de Requisição**: Automaticamente injeta o token de autenticação (`Bearer <token>`) no cabeçalho `Authorization` de cada requisição, se o token estiver presente no `localStorage`. Isso garante que as requisições autenticadas sejam enviadas corretamente.
+- **Interceptor de Resposta**: Lida com erros de resposta, especificamente `401 Unauthorized` e `403 Forbidden`. Nesses casos, o interceptor remove o token e os dados do usuário do `localStorage` e redireciona o usuário para a página de login (`/login`), garantindo que a sessão seja encerrada de forma segura e que o usuário seja forçado a reautenticar-se se sua sessão expirar ou for inválida.
+
 ## Instalação e Execução
 
 Para configurar e executar o projeto localmente:
@@ -185,36 +194,10 @@ Para configurar e executar o projeto localmente:
     yarn install
     ```
 3.  **Configuração da API:**
-    Certifique-se de que o arquivo `api.js` (geralmente em `src/api.js` ou `src/utils/api.js`) esteja configurado para apontar para o URL correto do seu backend.
-
-    ```javascript
-    // Exemplo em src/api.js
-    import axios from "axios";
-
-    const api = axios.create({
-      baseURL: "http://localhost:3001/api", // Substitua pelo URL da sua API de backend
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    // Adicionar interceptor para token de autenticação, se aplicável
-    api.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem("token"); // Ou como seu token é armazenado
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
-    export default api;
+    Crie um arquivo `.env` na raiz do projeto e defina a variável de ambiente `VITE_API_BASE_URL` com o URL da sua API de backend.
     ```
-
+    VITE_API_BASE_URL=http://localhost:3001/api # Exemplo
+    ```
 4.  **Inicie o servidor de desenvolvimento:**
     ```bash
     npm start
@@ -222,7 +205,3 @@ Para configurar e executar o projeto localmente:
     yarn start
     ```
     O aplicativo será aberto no seu navegador padrão em `http://localhost:3000` (ou outra porta disponível).
-
----
-
-Este README fornece uma visão completa do funcionamento do seu sistema de gestão de estoque hospitalar, abrangendo suas funcionalidades, permissões de usuário e tecnologias utilizadas.

@@ -56,30 +56,3 @@ Assumindo que você tem um projeto React configurado:
     yarn add react react-icons styled-components axios
     ```
 3.  Garanta que seus arquivos `api.js` e `AuthContext.js` estejam corretamente configurados e acessíveis.
-
-## Uso
-
-Importe e utilize o componente `Configuracoes` em sua aplicação, geralmente dentro de um sistema de roteamento que controle o acesso com base no perfil do usuário:
-
-```jsx
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Configuracoes from "./components/Configuracoes"; // Ajuste o caminho conforme necessário
-import Login from "./components/Login"; // Exemplo
-import Dashboard from "./components/Dashboard"; // Exemplo
-
-function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/configuracoes" element={<Configuracoes />} />
-        {/* Outras rotas */}
-      </Routes>
-    </Router>
-  );
-}
-
-export default App;
-```

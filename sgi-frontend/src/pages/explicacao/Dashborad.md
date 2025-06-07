@@ -62,24 +62,3 @@ Assumindo que você tem um projeto React configurado:
     yarn add react react-icons styled-components axios
     ```
 3.  Certifique-se de que seus arquivos `api.js` e `AuthContext.js` estejam corretamente configurados e acessíveis.
-
-## Uso
-
-Importe e use o componente `Dashboard` dentro do roteamento ou layout principal de sua aplicação:
-
-```jsx
-import React from "react";
-import Dashboard from "./components/Dashboard"; // Ajuste o caminho conforme necessário
-
-function App() {
-  return (
-    <div>
-      {/* Outros componentes */}
-      <Dashboard />
-      {/* Outros componentes */}
-    </div>
-  );
-}
-
-export default App;
-```

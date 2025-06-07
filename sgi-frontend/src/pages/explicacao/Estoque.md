@@ -61,24 +61,3 @@ Assumindo que você tem um projeto React configurado:
     yarn add react react-icons react-datepicker styled-components axios
     ```
 3.  Garanta que seus arquivos `api.js` e `AuthContext.js` estejam corretamente configurados e acessíveis.
-
-## Uso
-
-Importe e utilize o componente `Estoque` em sua aplicação, geralmente dentro de um sistema de roteamento:
-
-```jsx
-import React from "react";
-import Estoque from "./components/Estoque"; // Ajuste o caminho conforme necessário
-
-function App() {
-  return (
-    <div>
-      {/* Outros componentes ou sistema de roteamento */}
-      <Estoque />
-      {/* Outros componentes */}
-    </div>
-  );
-}
-
-export default App;
-```
