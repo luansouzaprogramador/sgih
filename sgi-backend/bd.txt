@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS lotes (
     data_validade DATE NOT NULL,
     quantidade_inicial INT NOT NULL,
     quantidade_atual INT NOT NULL,
-    status ENUM('ativo', 'vencido', 'bloqueado') DEFAULT 'ativo',
+    status ENUM('ativo', 'vencido', 'baixo') DEFAULT 'ativo',
     unidade_id INT NOT NULL, -- Which unit currently holds this batch
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -177,24 +177,3 @@ INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUE
 -- Insert Alertas
 
 DROP DATABASE IF EXISTS sgih_teste;
-
-
-
--- Mudanças necessárias
--- Tabela para Lotes (para rastreabilidade por lote e validade)
-CREATE TABLE IF NOT EXISTS lotes (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    insumo_id INT NOT NULL,
-    numero_lote VARCHAR(255) NOT NULL,
-    data_validade DATE NOT NULL,
-    quantidade_inicial INT NOT NULL,
-    quantidade_atual INT NOT NULL,
-    status ENUM('ativo', 'vencido', 'baixo') DEFAULT 'ativo',
-    unidade_id INT NOT NULL, -- Which unit currently holds this batch
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (insumo_id) REFERENCES insumos(id),
-    FOREIGN KEY (unidade_id) REFERENCES unidades_hospitalares(id),
-    UNIQUE (insumo_id, numero_lote, unidade_id) -- A batch number for a specific insumo should be unique within a unit
-);
-

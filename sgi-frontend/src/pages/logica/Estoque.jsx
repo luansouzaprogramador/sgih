@@ -191,9 +191,6 @@ const Estoque = () => {
 
   const getStatus = (lote) => {
     const isExpired = new Date(lote.data_validade) < new Date();
-    if (lote.status === "bloqueado") {
-      return "Bloqueado";
-    }
     if (isExpired) {
       return "Vencido";
     }

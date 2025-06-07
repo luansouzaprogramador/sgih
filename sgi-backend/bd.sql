@@ -1,8 +1,8 @@
--- Create Database
-CREATE DATABASE IF NOT EXISTS sgi_saude;
-USE sgi_saude;
+-- Criar Banco de Dados
+CREATE DATABASE IF NOT EXISTS sgih_teste;
+USE sgih_teste;
 
--- Table for Hospital Units (Unidades Hospitalares)
+-- Tabela para Unidades Hospitalares
 CREATE TABLE IF NOT EXISTS unidades_hospitalares (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL UNIQUE,
@@ -11,34 +11,20 @@ CREATE TABLE IF NOT EXISTS unidades_hospitalares (
     email VARCHAR(255)
 );
 
--- Table for Users (Estoquista, Gerente de Estoque)
+-- Tabela para Usuários (Gestor, Almoxarifado Central, Almoxarifado Local, Profissionais da Saúde)
 CREATE TABLE IF NOT EXISTS usuarios (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     senha VARCHAR(255) NOT NULL, -- Hashed password
-    tipo_usuario ENUM('estoquista', 'gerente_estoque') NOT NULL,
+    tipo_usuario ENUM('gestor', 'almoxarife_central', 'almoxarife_local', 'profissional_saude') NOT NULL,
     unidade_id INT, -- Associate user with a specific hospital unit
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (unidade_id) REFERENCES unidades_hospitalares(id)
 );
 
-use sgi_saude;
-CREATE TABLE IF NOT EXISTS usuarios_teste (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    senha VARCHAR(255) NOT NULL, -- Hashed password
-    tipo_usuario ENUM('almoxarife_central', 'almoxarife_local', 'gestor', 'profissionais_saude') NOT NULL,
-    unidade_id INT, -- Associate user with a specific hospital unit
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (unidade_id) REFERENCES unidades_hospitalares(id)
-);
-
-
--- Table for Insumos (Supplies)
+-- Tabela para Insumos
 CREATE TABLE IF NOT EXISTS insumos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(255) NOT NULL,
@@ -49,7 +35,7 @@ CREATE TABLE IF NOT EXISTS insumos (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Table for Batches (Lotes) - for traceability by batch and validity
+-- Tabela para Lotes (para rastreabilidade por lote e validade)
 CREATE TABLE IF NOT EXISTS lotes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     insumo_id INT NOT NULL,
@@ -57,7 +43,7 @@ CREATE TABLE IF NOT EXISTS lotes (
     data_validade DATE NOT NULL,
     quantidade_inicial INT NOT NULL,
     quantidade_atual INT NOT NULL,
-    status ENUM('ativo', 'vencido', 'bloqueado') DEFAULT 'ativo',
+    status ENUM('ativo', 'vencido', 'baixo') DEFAULT 'ativo',
     unidade_id INT NOT NULL, -- Which unit currently holds this batch
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -66,7 +52,7 @@ CREATE TABLE IF NOT EXISTS lotes (
     UNIQUE (insumo_id, numero_lote, unidade_id) -- A batch number for a specific insumo should be unique within a unit
 );
 
--- Table for Movements (Movimentacoes) - for entries and exits
+-- Tabbela para Movimentacoes - para entradas, saídas e transferências
 CREATE TABLE IF NOT EXISTS movimentacoes (
     id INT AUTO_INCREMENT PRIMARY KEY,
     lote_id INT NOT NULL,
@@ -83,7 +69,7 @@ CREATE TABLE IF NOT EXISTS movimentacoes (
     FOREIGN KEY (unidade_destino_id) REFERENCES unidades_hospitalares(id)
 );
 
--- Table for Deliveries/Schedules (Agendamentos)
+-- Tabela para Entregas/Agendamentos
 CREATE TABLE IF NOT EXISTS agendamentos (
     id INT AUTO_INCREMENT PRIMARY KEY,
     unidade_origem_id INT NOT NULL,
@@ -99,7 +85,7 @@ CREATE TABLE IF NOT EXISTS agendamentos (
     FOREIGN KEY (responsavel_agendamento_id) REFERENCES usuarios(id)
 );
 
--- Table for Items in an Agendamento (Itens do Agendamento)
+-- Tabela para Itens do Agendamento
 CREATE TABLE IF NOT EXISTS agendamento_itens (
     id INT AUTO_INCREMENT PRIMARY KEY,
     agendamento_id INT NOT NULL,
@@ -109,7 +95,7 @@ CREATE TABLE IF NOT EXISTS agendamento_itens (
     FOREIGN KEY (lote_id) REFERENCES lotes(id)
 );
 
--- Table for Alerts (Alertas)
+-- Tabela para Alertas
 CREATE TABLE IF NOT EXISTS alertas (
     id INT AUTO_INCREMENT PRIMARY KEY,
     unidade_id INT NOT NULL, -- Associated unit
@@ -124,90 +110,70 @@ CREATE TABLE IF NOT EXISTS alertas (
     FOREIGN KEY (lote_id) REFERENCES lotes(id)
 );
 
--- Table for Auditing Logs
-CREATE TABLE IF NOT EXISTS logs_auditoria (
+CREATE TABLE IF NOT EXISTS solicitacoes_insumo (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    usuario_id INT,
-    acao VARCHAR(255) NOT NULL,
-    entidade_afetada VARCHAR(255),
-    entidade_id INT,
-    data_hora DATETIME DEFAULT CURRENT_TIMESTAMP,
-    detalhes TEXT,
-    ip_address VARCHAR(45),
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    insumo_id INT NOT NULL,
+    quantidade INT NOT NULL,
+    solicitante_id INT NOT NULL,
+    status ENUM('pendente', 'aprovada', 'rejeitada', 'concluida') DEFAULT 'pendente',
+    data_solicitacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_atualizacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (insumo_id) REFERENCES insumos(id),
+    FOREIGN KEY (solicitante_id) REFERENCES usuarios(id)
 );
 
--- USE the database
-USE sgi_saude;
+USE sgih_teste;
 
--- Insert Hospital Units
+-- Inserir Unidades Hospitalares
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('Hospital Central FHEMIG', 'Rua Principal, 123, Centro', '31987654321', 'hospital.central@fhemig.gov.br');
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('UPA Leste FHEMIG', 'Av. Afonso Pena, 456, Boa Vista', '31998765432', 'upa.leste@fhemig.gov.br');
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('Hospital Metropolitano', 'Rua da Saúde, 789, Bairro Feliz', '3133334444', 'hospital.metro@example.com');
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('Pronto Socorro Oeste', 'Av. das Rosas, 10, Cidade Jardim', '3122221111', 'pronto.socorro@example.com');
 
--- Insert Users
-INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Administrador Geral', 'admin@fhemig.gov.br', '$2b$10$6.zRaRcWWANpeqLLxu0i..7b/SjyDbw1O9/Rkub6X6Wk/LcJ3Z9ES', 'gerente_estoque', 1);
-USE sgi_saude;
-INSERT INTO usuarios_teste (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Gestor', 'gestor@fhemig.gov.br', '$2b$10$J5O4tGS42BnqgBTtKEVrHuKS06B5p972eKAI0hLZtLCJdGSu9J8Vm', 'gestor', 1);
-INSERT INTO usuarios_teste (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Gestor', 'admin@fhemig.gov.br', '$2b$10$6.zRaRcWWANpeqLLxu0i..7b/SjyDbw1O9/Rkub6X6Wk/LcJ3Z9ES', 'gestor', 1);
+-- Inserir Usuários
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(1) Gestor', 'gestor@gmail.com', '$2b$10$volk5rV5gnHRf6OZKyck3OuNtCikHuMf.6v90OAI0Hv8tFHgKZhJy', 'gestor', 1);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(1) Almoxarife Central', 'almoxarifecentral@gmail.com', '$2b$10$63NGtiVSQYZj/svsff.Wreqcut02YXXabNnofgXSu9BDksYxoWX.S', 'almoxarife_central', 1);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(1) Almoxarife Local', 'almoxarifelocal@gmail.com', '$2b$10$24iEeyHGCpsNwRLeoJDfE.VG2XXwuiEaVJseQ441WxFN93LdL5Yt2', 'almoxarife_local', 1);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(1) Profissional de Saúde', 'medico@gmail.com', '$2b$10$hVQH6gdDwll36EB49f3vr.MjpwGwmJWqJ0UCwakap8m2j3SfS53vO', 'profissional_saude', 1);
 
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(2) Gestor', 'gestor2@gmail.com', '$2b$10$volk5rV5gnHRf6OZKyck3OuNtCikHuMf.6v90OAI0Hv8tFHgKZhJy', 'gestor', 2);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(2) Almoxarife Local', 'almoxarifelocal2@gmail.com', '$2b$10$24iEeyHGCpsNwRLeoJDfE.VG2XXwuiEaVJseQ441WxFN93LdL5Yt2', 'almoxarife_local', 2);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(2) Profissional de Saúde', 'medico2@gmail.com', '$2b$10$hVQH6gdDwll36EB49f3vr.MjpwGwmJWqJ0UCwakap8m2j3SfS53vO', 'profissional_saude', 2);
 
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(3) Gestor', 'gestor3@gmail.com', '$2b$10$volk5rV5gnHRf6OZKyck3OuNtCikHuMf.6v90OAI0Hv8tFHgKZhJy', 'gestor', 3);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(3) Almoxarife Local', 'almoxarifelocal3@gmail.com', '$2b$10$24iEeyHGCpsNwRLeoJDfE.VG2XXwuiEaVJseQ441WxFN93LdL5Yt2', 'almoxarife_local', 3);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(3) Profissional de Saúde', 'medico3@gmail.com', '$2b$10$hVQH6gdDwll36EB49f3vr.MjpwGwmJWqJ0UCwakap8m2j3SfS53vO', 'profissional_saude', 3);
 
--- Insert Insumos
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Máscara Cirúrgica', 'Máscara descartável de proteção facial', 'caixa', 'Almoxarifado Principal');
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(4) Gestor', 'gestor4@gmail.com', '$2b$10$volk5rV5gnHRf6OZKyck3OuNtCikHuMf.6v90OAI0Hv8tFHgKZhJy', 'gestor', 4);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(4) Almoxarife Local', 'almoxarifelocal4@gmail.com', '$2b$10$24iEeyHGCpsNwRLeoJDfE.VG2XXwuiEaVJseQ441WxFN93LdL5Yt2', 'almoxarife_local', 4);
+INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('(4) Profissional de Saúde', 'medico4@gmail.com', '$2b$10$hVQH6gdDwll36EB49f3vr.MjpwGwmJWqJ0UCwakap8m2j3SfS53vO', 'profissional_saude', 4);
 
--- Insert Lotes (assuming insumo_id and unidade_id based on previous inserts)
--- Lote 1: Máscara Cirúrgica no Hospital Central
-INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, status, unidade_id) VALUES (1, 'MASC202401-001', '2025-12-31', 500, 480, 'ativo', 1);
-INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, status, unidade_id) VALUES (1, 'MASC202402-002', '2026-06-30', 300, 300, 'ativo', 1);
+-- Inserir Insumos
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Luvas de Procedimento', 'Luvas descartáveis de látex ou nitrilo', 'caixa', 'Armazenar em local seco e protegido da luz');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Álcool 70%', 'Solução de álcool etílico a 70% para assepsia', 'litro', 'Manter em local ventilado e afastado de fontes de calor');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Gaze Estéril', 'Compressas de gaze esterilizadas', 'pacote', 'Proteger da umidade e contaminação');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Seringa Descartável', 'Seringa plástica para uso único', 'unidade', 'Armazenar em embalagem original, em local limpo');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Agulha Descartável', 'Agulha hipodérmica para uso único', 'unidade', 'Manter em local seco e fresco, longe do alcance de crianças');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Atadura de Crepe', 'Faixa elástica para imobilização e compressão', 'rolo', 'Guardar em local fresco e seco');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Esparadrapo', 'Fita adesiva hipoalergênica', 'rolo', 'Conservar em local limpo e seco');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Algodão Hidrófilo', 'Algodão para curativos e limpeza', 'pacote', 'Proteger da umidade');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Sabonete Antisséptico', 'Sabonete líquido com agentes bactericidas', 'litro', 'Armazenar em temperatura ambiente');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Lençol Descartável', 'Lençol de TNT para macas e leitos', 'pacote', 'Manter em local limpo e seco');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Cânula Nasal', 'Dispositivo para administração de oxigênio', 'unidade', 'Armazenar em embalagem lacrada, em local protegido');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Clorexidina Tópica', 'Solução antisséptica de clorexidina para uso externo', 'litro', 'Manter em local fresco e protegido da luz');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Scalp Descartável', 'Dispositivo para acesso venoso periférico', 'unidade', 'Armazenar em embalagem estéril, em local limpo');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Bandagem Elástica', 'Faixa elástica adesiva para compressão', 'rolo', 'Guardar em local seco e fresco');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Termômetro Clínico', 'Termômetro digital para medição de temperatura corporal', 'unidade', 'Manter em local seco e protegido de impactos');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Gorro Descartável', 'Gorro de TNT para proteção capilar', 'pacote', 'Proteger da umidade e sujeira');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Propé Descartável', 'Protetor de calçados de TNT', 'pacote', 'Armazenar em local limpo e seco');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Caixa de Descarte (Perfurocortantes)', 'Recipiente para descarte seguro de materiais perfurocortantes', 'unidade', 'Manter em local de fácil acesso, mas seguro');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Compressa Cirúrgica', 'Compressa de algodão para procedimentos cirúrgicos', 'pacote', 'Armazenar em embalagem estéril e protegida da umidade');
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Água Destilada', 'Água purificada para diluição de medicamentos e soluções', 'litro', 'Manter em recipiente fechado, em local fresco');
 
--- Lote 2: Luva de Procedimento (M) no Hospital Central
-INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, status, unidade_id) VALUES (2, 'LUVA202401-001', '2025-10-15', 1000, 950, 'ativo', 1);
-
--- Lote 3: Soro Fisiológico na UPA Leste
-INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, status, unidade_id) VALUES (3, 'SORO202403-001', '2025-05-20', 200, 180, 'ativo', 2);
-
--- Lote 4: Alcool 70% no Hospital Central (exemplo de vencido)
-INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, status, unidade_id) VALUES (4, 'ALC202310-001', '2024-01-01', 50, 50, 'vencido', 1);
-
--- Lote 5: Máscara Cirúrgica no Hospital Metropolitano
-INSERT INTO lotes (insumo_id, numero_lote, data_validade, quantidade_inicial, quantidade_atual, status, unidade_id) VALUES (1, 'MASC202403-003', '2026-12-31', 400, 400, 'ativo', 3);
-
--- Insert Movimentacoes (using existing lote_id, responsavel_id, unidade_origem_id, unidade_destino_id)
--- Movimentação de Saída (Máscara Cirúrgica - Hospital Central)
-INSERT INTO movimentacoes (lote_id, tipo, quantidade, responsavel_id, unidade_origem_id, observacao) VALUES (1, 'saida', 20, 2, 1, 'Uso em pronto atendimento');
-
--- Movimentação de Entrada (Máscara Cirúrgica - Hospital Central)
-INSERT INTO movimentacoes (lote_id, tipo, quantidade, responsavel_id, unidade_origem_id, observacao) VALUES (2, 'entrada', 300, 1, 1, 'Recebimento de novo lote do fornecedor X');
-
--- Movimentação de Saída (Soro Fisiológico - UPA Leste)
-INSERT INTO movimentacoes (lote_id, tipo, quantidade, responsavel_id, unidade_origem_id, observacao) VALUES (3, 'saida', 10, 4, 2, 'Uso em emergência');
-
-
+-- Inserir Lotes (assumindo insumo_id e unidade_id com base nas inserções anteriores)
+-- Inserir Movimentacoes (usando lote_id, responsavel_id, unidade_origem_id, unidade_destino_id existentes)
 -- Insert Agendamentos (simulando uma transferência)
-use sgi_saude;
-INSERT INTO agendamentos (unidade_origem_id, unidade_destino_id, data_agendamento, status, observacao, responsavel_agendamento_id) VALUES (1, 3, '2025-06-05 10:00:00', 'pendente', 'Transferência de máscaras para suprir demanda do Hospital Metropolitano.', 1);
-INSERT INTO agendamentos (unidade_origem_id, unidade_destino_id, data_agendamento, status, observacao, responsavel_agendamento_id) VALUES (2, 4, '2025-06-10 14:30:00', 'pendente', 'Envio de luvas para o Pronto Socorro Oeste.', 3);
-
--- Insert Agendamento_Itens (para o primeiro agendamento)
--- Lote 1 (Máscara Cirúrgica do Hospital Central)
-INSERT INTO agendamento_itens (agendamento_id, lote_id, quantidade) VALUES (1, 1, 50);
-
--- Insert Agendamento_Itens (para o segundo agendamento)
--- Para este exemplo, estou usando o lote 3 (Soro Fisiológico) que está na UPA Leste (ID 2)
-INSERT INTO agendamento_itens (agendamento_id, lote_id, quantidade) VALUES (2, 3, 30);
-
-
+-- Inserir Agendamento_Itens
 -- Insert Alertas
-INSERT INTO alertas (unidade_id, tipo, mensagem, insumo_id, lote_id, status) VALUES (1, 'estoque_critico', 'Estoque de Máscara Cirúrgica (Lote MASC202401-001) está crítico. Quantidade atual: 20.', 1, 1, 'ativo');
-INSERT INTO alertas (unidade_id, tipo, mensagem, insumo_id, lote_id, status) VALUES (2, 'vencimento', 'O Lote SORO202403-001 de Soro Fisiológico está próximo do vencimento.', 3, 3, 'ativo');
-INSERT INTO alertas (unidade_id, tipo, mensagem, insumo_id, lote_id, status) VALUES (1, 'vencimento', 'O Lote ALC202310-001 de Álcool 70% está vencido e bloqueado para uso.', 4, 4, 'ativo');
 
--- Insert Logs de Auditoria
-INSERT INTO logs_auditoria (usuario_id, acao, entidade_afetada, entidade_id, detalhes, ip_address) VALUES (1, 'LOGIN', 'usuarios', 1, 'Login bem-sucedido', '192.168.1.100');
-INSERT INTO logs_auditoria (usuario_id, acao, entidade_afetada, entidade_id, detalhes, ip_address) VALUES (2, 'SAIDA_LOTE', 'lotes', 1, 'Retirada de 20 unidades de Máscara Cirúrgica (Lote MASC202401-001).', '192.168.1.101');
-INSERT INTO logs_auditoria (usuario_id, acao, entidade_afetada, entidade_id, detalhes, ip_address) VALUES (1, 'CRIAR_UNIDADE', 'unidades_hospitalares', 3, 'Nova unidade Hospital Metropolitano criada.', '192.168.1.100');
-INSERT INTO logs_auditoria (usuario_id, acao, entidade_afetada, entidade_id, detalhes, ip_address) VALUES (3, 'AGENDAMENTO_CRIADO', 'agendamentos', 2, 'Agendamento de transferência de insumos criado.', '192.168.1.102');
-
-DROP DATABASE IF EXISTS sgi_saude;
+DROP DATABASE IF EXISTS sgih_teste;

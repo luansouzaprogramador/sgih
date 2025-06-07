@@ -236,7 +236,6 @@ export const StatusIndicator = styled.span`
   background-color: ${(props) => {
     switch (props.statusType) {
       case "Vencido":
-      case "Bloqueado":
         return "#dc3545"; // Red
       case "Baixo":
         return "#ffc107"; // Orange/Yellow

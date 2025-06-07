@@ -144,7 +144,7 @@ router.put('/:id/status', authenticateToken, authorizeRoles(['almoxarife_central
   const { id } = req.params;
   const { status } = req.body; // 'ativo', 'baixo', 'vencido'
 
-  if (!['ativo', 'bloqueado', 'vencido'].includes(status)) {
+  if (!['ativo', 'baixo', 'vencido'].includes(status)) {
     return res.status(400).json({ message: 'Invalid status.' });
   }
 

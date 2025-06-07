@@ -38,8 +38,8 @@ async function checkAndCreateAlerts(unidade_id) {
         await pool.execute('UPDATE alertas SET status = "resolvido" WHERE lote_id = ? AND tipo = "vencimento" AND status = "ativo"', [lote.id]);
       }
 
-      // 2. Verificação de Estoque Crítico (somente se não estiver vencido ou bloqueado)
-      if (lote.status !== 'vencido' && lote.status !== 'bloqueado') {
+      // 2. Verificação de Estoque Crítico (somente se não estiver vencido)
+      if (lote.status !== 'vencido') {
         const criticalThreshold = 10;
         if (lote.quantidade_atual < criticalThreshold) {
           // Cria ou reativa alerta de estoque crítico
