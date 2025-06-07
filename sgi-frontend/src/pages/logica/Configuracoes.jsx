@@ -226,7 +226,7 @@ const Configuracoes = () => {
                 <option value="gestor">Gestor</option>
                 <option value="almoxarife_central">Almoxarifado Central</option>
                 <option value="almoxarife_local">Almoxarife Local</option>
-                <option value="profissionais_saude">Profissionais Saúde</option>
+                <option value="profissional_saude">Profissionais Saúde</option>
               </select>
             </div>
             <div className="form-group">
