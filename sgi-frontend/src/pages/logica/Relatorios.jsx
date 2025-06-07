@@ -7,7 +7,7 @@ import {
   FaFileCsv,
   FaChartLine,
   FaExclamationCircle,
-} from "react-icons/fa"; // Import FaExclamationCircle
+} from "react-icons/fa";
 import * as XLSX from "xlsx";
 import {
   ReportsPageContainer,
@@ -137,7 +137,11 @@ const Relatorios = () => {
   };
 
   // Conditional rendering based on user type
-  if (user?.tipo_usuario !== "almoxarife_central") {
+  // Allow both almoxarife_central and almoxarife_local to access
+  if (
+    user?.tipo_usuario !== "almoxarife_central" &&
+    user?.tipo_usuario !== "almoxarife_local"
+  ) {
     return (
       <ReportsPageContainer>
         <MessageContainer type="error">
@@ -195,10 +199,6 @@ const Relatorios = () => {
               />
             </>
           )}
-
-          <button className="btn-primary" onClick={handleGenerateReport}>
-            Gerar Relatório
-          </button>
         </FilterGroup>
 
         <TableContainer>
@@ -233,7 +233,14 @@ const Relatorios = () => {
                       <td>{movement.insumo_nome}</td>
                       <td>{movement.numero_lote || "N/A"}</td>
                       <td>{movement.quantidade}</td>
-                      <td>{movement.unidade_nome}</td>
+                      <td>
+                        {movement.tipo === "entrada" &&
+                          movement.unidade_destino_nome}
+                        {movement.tipo === "saida" &&
+                          movement.unidade_origem_nome}
+                        {movement.tipo === "transferencia" &&
+                          `${movement.unidade_origem_nome} -> ${movement.unidade_destino_nome}`}
+                      </td>
                       <td>{movement.responsavel_nome}</td>
                     </tr>
                   ))}

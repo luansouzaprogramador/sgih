@@ -89,7 +89,7 @@ router.get('/:unidadeId', authenticateToken, async (req, res) => {
 
 router.post('/', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
   const { unidade_origem_id, unidade_destino_id, data_agendamento, observacao, itens } = req.body;
-  const responsavel_agendamento_id = req.user.id;
+  const responsavel_agendamento_id = req.user.userId;
 
   if (!unidade_origem_id || !unidade_destino_id || !data_agendamento || !itens || itens.length === 0) {
     return res.status(400).json({ message: 'Todos os campos obrigatórios (origem, destino, data, itens) devem ser preenchidos.' });
@@ -159,7 +159,7 @@ router.post('/', authenticateToken, authorizeRoles(['almoxarife_central']), asyn
 router.put('/:id/status', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
   const { id } = req.params;
   const { status } = req.body; // 'em_transito', 'concluido', 'cancelado'
-  const responsavel_id = req.user.id;
+  const responsavel_id = req.user.userId;
 
   if (!['em_transito', 'concluido', 'cancelado'].includes(status)) {
     return res.status(400).json({ message: 'Status inválido.' });

@@ -11,7 +11,7 @@ router.get('/estoque_critico', authenticateToken, authorizeRoles(['gestor']), as
             FROM lotes l
             JOIN insumos i ON l.insumo_id = i.id
             JOIN unidades_hospitalares uh ON l.unidade_id = uh.id
-            WHERE l.quantidade_atual < 10 AND l.status = 'ativo' 
+            WHERE l.quantidade_atual < 20 AND l.status = 'ativo' 
             ORDER BY uh.nome, i.nome
         `);
     res.json(rows);

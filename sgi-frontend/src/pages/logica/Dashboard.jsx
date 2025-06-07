@@ -32,6 +32,8 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isAlmoxarifeCentral =
+    user && user.tipo_usuario === "almoxarife_central";
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -52,15 +54,16 @@ const Dashboard = () => {
           const insumosRes = await api.get("/insumos");
           totalInsumos = insumosRes.data.length;
 
-          const agendamentosEndpoint =
-            user.tipo_usuario === "almoxarife_local"
-              ? `/agendamentos/${user.unidade_id}`
-              : "/agendamentos/";
-
-          const agendamentosRes = await api.get(agendamentosEndpoint);
-          pendingDeliveries = agendamentosRes.data.filter(
-            (a) => a.status === "pendente"
-          ).length;
+          // Pending deliveries logic: only for almoxarife_central
+          if (user.tipo_usuario === "almoxarife_central") {
+            const agendamentosRes = await api.get("/agendamentos/");
+            pendingDeliveries = agendamentosRes.data.filter(
+              (a) => a.status === "pendente"
+            ).length;
+          } else {
+            // For almoxarife_local, pendingDeliveries remains 0 as per requirement
+            pendingDeliveries = 0;
+          }
 
           const alertsEndpoint =
             user.tipo_usuario === "almoxarife_local"

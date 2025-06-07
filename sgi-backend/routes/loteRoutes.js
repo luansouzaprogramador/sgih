@@ -34,9 +34,9 @@ router.get('/:unidadeId', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/entrada', authenticateToken, authorizeRoles(['almoxarife_central', 'gestor']), async (req, res) => {
+router.post('/entrada', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local', 'gestor']), async (req, res) => {
   const { insumo_id, numero_lote, data_validade, quantidade, unidade_id } = req.body;
-  const responsavel_id = req.user.id;
+  const responsavel_id = req.user.userId;
 
   try {
     // Check if the insumo exists
@@ -100,7 +100,7 @@ router.post('/entrada', authenticateToken, authorizeRoles(['almoxarife_central',
 
 router.post('/saida', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   const { lote_id, quantidade_saida, unidade_origem_id } = req.body;
-  const responsavel_id = req.user.id;
+  const responsavel_id = req.user.userId;
 
   // Ensure almoxarife_local can only manage lots from their own unit
   if (req.user.tipo_usuario === 'almoxarife_local' && req.user.unidade_id !== unidade_origem_id) {
@@ -117,9 +117,6 @@ router.post('/saida', authenticateToken, authorizeRoles(['almoxarife_central', '
 
     if (moment(lote.data_validade).startOf('day').isBefore(moment().startOf('day'))) {
       return res.status(400).json({ message: 'Cannot use expired material.' });
-    }
-    if (lote.status === 'bloqueado') {
-      return res.status(400).json({ message: 'Cannot use blocked material.' });
     }
 
     if (lote.quantidade_atual < quantidade_saida) {
@@ -145,7 +142,7 @@ router.post('/saida', authenticateToken, authorizeRoles(['almoxarife_central', '
 
 router.put('/:id/status', authenticateToken, authorizeRoles(['almoxarife_central']), async (req, res) => {
   const { id } = req.params;
-  const { status } = req.body; // 'ativo', 'bloqueado', 'vencido'
+  const { status } = req.body; // 'ativo', 'baixo', 'vencido'
 
   if (!['ativo', 'bloqueado', 'vencido'].includes(status)) {
     return res.status(400).json({ message: 'Invalid status.' });

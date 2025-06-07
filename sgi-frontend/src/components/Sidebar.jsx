@@ -142,7 +142,7 @@ const Sidebar = () => {
             </Link>
           </NavItem>
         )}
-        {isAlmoxarifeCentral && (
+        {(isAlmoxarifeCentral || isAlmoxarifeLocal) && (
           <NavItem>
             <Link
               to="/relatorios"
