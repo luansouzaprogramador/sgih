@@ -82,9 +82,9 @@ const Relatorios = () => {
   };
 
   const fetchCriticalStock = async (unitId) => {
-    let url = "/alertas/estoque-critico";
+    let url = "/alertas/estoque_critico";
     if (unitId && unitId !== "all") {
-      url = `/alertas/estoque-critico/${unitId}`;
+      url = `/alertas/estoque_critico/${unitId}`;
     }
     try {
       const response = await api.get(url);

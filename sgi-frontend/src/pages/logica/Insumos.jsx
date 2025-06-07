@@ -23,7 +23,7 @@ import {
 } from "../style/InsumosStyles";
 
 const Insumos = () => {
-  const { user } = useAuth(); // Dynamically get user from AuthContext
+  const { user } = useAuth();
   const [insumos, setInsumos] = useState([]);
   const [editingInsumo, setEditingInsumo] = useState(null);
   const [formData, setFormData] = useState({
@@ -33,9 +33,8 @@ const Insumos = () => {
     local_armazenamento: "",
   });
   const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [messageType, setMessageType] = useState(null); // 'success', 'error', 'info'
+  const [messageType, setMessageType] = useState(null);
   const [requestFormData, setRequestFormData] = useState({
-    // New state for request form
     insumo_id: "",
     quantidade: "",
   });
@@ -46,7 +45,7 @@ const Insumos = () => {
     setTimeout(() => {
       setFeedbackMessage(null);
       setMessageType(null);
-    }, 5000); // Message disappears after 5 seconds
+    }, 5000);
   };
 
   useEffect(() => {
@@ -69,7 +68,6 @@ const Insumos = () => {
   };
 
   const handleRequestFormChange = (e) => {
-    // New handler for request form
     const { name, value } = e.target;
     setRequestFormData({ ...requestFormData, [name]: value });
   };
@@ -110,14 +108,14 @@ const Insumos = () => {
       unidade_medida: "",
       local_armazenamento: "",
     });
-    fetchInsumos(); // Refresh the list
+    fetchInsumos();
   };
 
   const handleSubmitRequest = async (e) => {
-    // New submit handler for requests
     e.preventDefault();
     try {
-      await api.post("/solicitacoes-insumo", requestFormData); // Assuming this endpoint
+      // Endpoint correto baseado na montagem do backend: /api/solicitacoes_insumo
+      await api.post("/solicitacoes_insumo", requestFormData);
       displayMessage("Solicitação de insumo enviada com sucesso!", "success");
       setRequestFormData({
         insumo_id: "",
@@ -150,7 +148,7 @@ const Insumos = () => {
       try {
         await api.delete(`/insumos/${id}`);
         displayMessage("Insumo excluído com sucesso!", "success");
-        fetchInsumos(); // Refresh the list
+        fetchInsumos();
       } catch (error) {
         console.error("Erro ao excluir insumo:", error);
         displayMessage(
@@ -163,12 +161,12 @@ const Insumos = () => {
     }
   };
 
-  // If user is not 'almoxarife_central' or 'almoxarife_local' or 'gestor', deny access
   if (
     !user ||
     (user.tipo_usuario !== "almoxarife_central" &&
       user.tipo_usuario !== "almoxarife_local" &&
-      user.tipo_usuario !== "gestor")
+      user.tipo_usuario !== "gestor" &&
+      user.tipo_usuario !== "profissional_saude")
   ) {
     return (
       <InsumosPageContainer>
@@ -193,7 +191,6 @@ const Insumos = () => {
         </MessageContainer>
       )}
 
-      {/* almoxarife_central || almoxarife_local: Form for adding/editing insumos */}
       {(user.tipo_usuario === "almoxarife_central" ||
         user.tipo_usuario === "almoxarife_local") && (
         <InsumoCard>
@@ -267,8 +264,8 @@ const Insumos = () => {
         </InsumoCard>
       )}
 
-      {/* Gestor: Form for requesting insumos */}
-      {user.tipo_usuario === "gestor" && (
+      {(user.tipo_usuario === "gestor" ||
+        user.tipo_usuario === "profissional_saude") && (
         <InsumoCard>
           <h4>
             <FaClipboardList /> Solicitar Insumo
@@ -325,11 +322,9 @@ const Insumos = () => {
                 <th>Descrição</th>
                 <th>Unidade de Medida</th>
                 <th>Local de Armazenamento</th>
+                {/* Removido o espaço em branco problemático e garantido que não há quebras de linha entre <th> e </th> */}
                 {(user.tipo_usuario === "almoxarife_central" ||
-                  user.tipo_usuario === "almoxarife_local") && (
-                  <th>Ações</th>
-                )}{" "}
-                {/* Actions column only for almoxarife_central ou almoxarife_local */}
+                  user.tipo_usuario === "almoxarife_local") && <th>Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -342,7 +337,7 @@ const Insumos = () => {
                     <td>{insumo.unidade_medida || "N/A"}</td>
                     <td>{insumo.local_armazenamento || "N/A"}</td>
                     {(user.tipo_usuario === "almoxarife_central" ||
-                      user.tipo_usuario === "almoxarife_local") && ( // Action buttons only for almoxarife_central or almoxarife_local
+                      user.tipo_usuario === "almoxarife_local") && (
                       <td>
                         <ButtonGroup>
                           <button
@@ -374,8 +369,6 @@ const Insumos = () => {
                         : "5"
                     }
                   >
-                    {" "}
-                    {/* Adjust colspan based on role */}
                     <NoDataMessage>Nenhum insumo cadastrado.</NoDataMessage>
                   </td>
                 </tr>

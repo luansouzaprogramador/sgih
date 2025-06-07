@@ -119,7 +119,8 @@ const Dashboard = () => {
         Bem-vindo, <span>{user.nome}!</span>
       </WelcomeMessage>
 
-      {user.tipo_usuario === "gestor" && (
+      {(user.tipo_usuario === "gestor" ||
+        user.tipo_usuario === "profissional_saude") && (
         <>
           <SectionTitle>Alertas de Solicitação de Insumos</SectionTitle>
           <Card>
