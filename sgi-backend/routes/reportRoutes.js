@@ -4,7 +4,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/estoque_critico', authenticateToken, authorizeRoles(['gestor']), async (req, res) => {
+router.get('/estoque_critico', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   try {
     const [rows] = await pool.execute(`
             SELECT l.id AS lote_id, i.nome AS insumo_nome, l.quantidade_atual, uh.nome AS unidade_nome

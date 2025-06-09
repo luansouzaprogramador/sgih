@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
   try {
     // Only almoxarife_central should access this general route
-    if (req.user.tipo_usuario !== 'almoxarife_central') {
+    if (req.user.tipo_usuario !== ('almoxarife_central')) {
       return res.status(403).send('Acesso negado: Somente almoxarifes centrais podem acessar todos os alertas.');
     }
 
