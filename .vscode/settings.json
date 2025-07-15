@@ -9,9 +9,9 @@
       "server": "localhost",
       "port": 3306,
       "driver": "MySQL",
-      "name": "sgih_prod",
+      "name": "sgih",
       "username": "root",
-      "database": "sgih_prod"
+      "database": "sgih"
     }
   ]
 }

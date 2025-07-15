@@ -1,4 +1,4 @@
-// (Conteúdo do Sidebar.jsx permanece o mesmo da sua última versão)
+// Filename: Sidebar.jsx
 import React from "react";
 import styled from "styled-components";
 import { Link, useLocation } from "react-router-dom";
@@ -10,6 +10,8 @@ import {
   FaCogs,
   FaPrescriptionBottleAlt,
   FaHospitalAlt,
+  FaSignInAlt, // Icon for Entrada
+  FaSignOutAlt, // Icon for Saída
 } from "react-icons/fa";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -132,6 +134,28 @@ const Sidebar = () => {
             </Link>
           </NavItem>
         )}
+
+        {isAlmoxarifeLocal && (
+          <>
+            <NavItem>
+              <Link
+                to="/entrada-insumo"
+                className={location.pathname === "/entrada-insumo" ? "active" : ""}
+              >
+                <FaSignInAlt /> Entrada de Insumo
+              </Link>
+            </NavItem>
+            <NavItem>
+              <Link
+                to="/saida-insumo"
+                className={location.pathname === "/saida-insumo" ? "active" : ""}
+              >
+                <FaSignOutAlt /> Saída de Insumo
+              </Link>
+            </NavItem>
+          </>
+        )}
+
         {isAlmoxarifeCentral && (
           <NavItem>
             <Link

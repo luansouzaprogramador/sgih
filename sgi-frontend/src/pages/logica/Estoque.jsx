@@ -1,22 +1,15 @@
+// Filename: EstoqueGeral.jsx
 import React, { useState, useEffect } from "react";
 import api from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import {
-  FaPlus,
-  FaMinus,
   FaSearch,
   FaSyncAlt,
-  FaInfoCircle,
-  FaCheckCircle,
   FaExclamationCircle,
 } from "react-icons/fa";
 import {
   StockPageContainer,
   Title,
-  ControlPanel,
-  ActionCard,
   StockTableContainer,
   FilterGroup,
   Table,
@@ -25,44 +18,17 @@ import {
   NoDataMessage,
 } from "../style/EstoqueStyles"; // Import styled components
 
-const Estoque = () => {
+const EstoqueGeral = () => {
   const { user } = useAuth();
   const [insumos, setInsumos] = useState([]);
   const [lotes, setLotes] = useState([]);
   const [unidades, setUnidades] = useState([]);
-  const [selectedUnit, setSelectedUnit] = useState(user?.unidade_id || "");
-
-  // Messages state
-  const [feedbackMessage, setFeedbackMessage] = useState(null);
-  const [messageType, setMessageType] = useState(null); // 'success', 'error', 'info'
-
-  // Add/Remove forms state
-  const [addForm, setAddForm] = useState({
-    insumo_id: "",
-    numero_lote: "",
-    data_validade: null,
-    quantidade: "",
-    unidade_id: user?.unidade_id || "",
-  });
-
-  const [removeForm, setRemoveForm] = useState({
-    lote_id: "",
-    quantidade_saida: "",
-    unidade_origem_id: user?.unidade_id || "",
-  });
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterUnit, setFilterUnit] = useState(user?.unidade_id || ""); // Filter by unit for managers
-
-  const displayMessage = (message, type) => {
-    setFeedbackMessage(message);
-    setMessageType(type);
-    setTimeout(() => {
-      setFeedbackMessage(null);
-      setMessageType(null);
-    }, 5000); // Message disappears after 5 seconds
-  };
+  // For almoxarife_central, filterUnit can be any unit or empty for all.
+  // For almoxarife_local, filterUnit is always their own unit.
+  const [filterUnit, setFilterUnit] = useState(user?.unidade_id || "");
 
   const fetchInsumos = async () => {
     try {
@@ -70,7 +36,7 @@ const Estoque = () => {
       setInsumos(response.data);
     } catch (error) {
       console.error("Error fetching insumos:", error);
-      displayMessage("Erro ao carregar insumos.", "error");
+      // No displayMessage here, as it's a background fetch
     }
   };
 
@@ -80,121 +46,71 @@ const Estoque = () => {
       setUnidades(response.data);
     } catch (error) {
       console.error("Error fetching units:", error);
-      displayMessage("Erro ao carregar unidades.", "error");
+      // No displayMessage here, as it's a background fetch
     }
   };
 
   const fetchLotes = async (unitId) => {
-    if (!unitId && user?.tipo_usuario !== "almoxarife_central") {
+    if (!user) return;
+
+    let endpoint = "/lotes"; // Default for central or if no unit specified
+    if (user.tipo_usuario === "almoxarife_local") {
+      // Almoxarife local can only see their own unit's lots
+      endpoint = `/lotes/${user.unidade_id}`;
+    } else if (user.tipo_usuario === "almoxarife_central") {
+      // Almoxarife central can see all or filter by unit
+      if (unitId && unitId !== "all") {
+        endpoint = `/lotes/${unitId}`;
+      } else {
+        // If "Todas as Unidades" is selected, the backend needs a route for all lots
+        // Assuming backend /lotes (without ID) returns all for almoxarife_central
+        // If not, this would need to iterate through units or have a dedicated backend route
+        endpoint = `/lotes/all`; // Placeholder, assuming backend supports /lotes/all or similar
+      }
+    } else {
+      // Other roles like gestor or profissional_saude shouldn't see this page based on requirements
       setLotes([]);
       return;
     }
+
     try {
-      const endpoint =
-        unitId && unitId !== "all" ? `/lotes/${unitId}` : "/lotes"; // Assuming /lotes returns all for manager
       const response = await api.get(endpoint);
       setLotes(response.data);
     } catch (error) {
       console.error("Error fetching lotes:", error);
-      displayMessage(
-        "Erro ao carregar lotes. Verifique suas permissões ou a unidade selecionada.",
-        "error"
-      );
-      setLotes([]);
+      // This page doesn't have a feedback message container, so log to console
     }
   };
 
   useEffect(() => {
     fetchInsumos();
     fetchUnits();
-    if (user?.unidade_id) {
-      fetchLotes(user.unidade_id);
-      setSelectedUnit(user.unidade_id);
-      setAddForm((prev) => ({ ...prev, unidade_id: user.unidade_id }));
-      setRemoveForm((prev) => ({
-        ...prev,
-        unidade_origem_id: user.unidade_id,
-      }));
-      setFilterUnit(user.unidade_id); // Set filter for almoxarife_local to their unit
-    } else if (user?.tipo_usuario === "almoxarife_central") {
-      setFilterUnit(""); // Default to no specific unit filter for manager (fetches all if backend supports)
-      fetchLotes(""); // Fetch all lots for manager by default if API supports
+    if (user) {
+      // Set initial filter unit based on user role
+      if (user.tipo_usuario === "almoxarife_local") {
+        setFilterUnit(user.unidade_id);
+        fetchLotes(user.unidade_id);
+      } else if (user.tipo_usuario === "almoxarife_central") {
+        setFilterUnit(""); // Default to "Todas as Unidades" for central
+        fetchLotes("all"); // Fetch all for central by default
+      }
     }
   }, [user]);
 
+  // Effect to re-fetch lots when filterUnit changes (only for almoxarife_central)
   useEffect(() => {
-    const unitToFetch =
-      user?.tipo_usuario === "almoxarife_central" ? filterUnit : selectedUnit;
-    fetchLotes(unitToFetch);
-  }, [filterUnit, selectedUnit, user]);
-
-  const handleAddSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...addForm,
-        data_validade: addForm.data_validade
-          ? addForm.data_validade.toISOString().split("T")[0]
-          : null,
-        quantidade: parseInt(addForm.quantidade),
-      };
-      await api.post("/lotes/entrada", payload);
-      displayMessage("Entrada de insumo registrada com sucesso!", "success");
-      setAddForm({
-        insumo_id: "",
-        numero_lote: "",
-        data_validade: null,
-        quantidade: "",
-        unidade_id: user?.unidade_id || "",
-      });
-      fetchLotes(
-        user?.tipo_usuario === "almoxarife_central" ? filterUnit : selectedUnit
-      ); // Refresh data
-    } catch (error) {
-      console.error("Erro ao adicionar insumo:", error);
-      displayMessage(
-        `Erro ao registrar entrada de insumo: ${
-          error.response?.data?.message || error.message
-        }`,
-        "error"
-      );
+    if (user?.tipo_usuario === "almoxarife_central") {
+      fetchLotes(filterUnit);
     }
-  };
+  }, [filterUnit, user]);
 
-  const handleRemoveSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        ...removeForm,
-        quantidade_saida: parseInt(removeForm.quantidade_saida),
-      };
-      await api.post("/lotes/saida", payload);
-      displayMessage("Saída de insumo registrada com sucesso!", "success");
-      setRemoveForm({
-        lote_id: "",
-        quantidade_saida: "",
-        unidade_origem_id: user?.unidade_id || "",
-      });
-      fetchLotes(
-        user?.tipo_usuario === "almoxarife_central" ? filterUnit : selectedUnit
-      ); // Refresh data
-    } catch (error) {
-      console.error("Erro ao remover insumo:", error);
-      displayMessage(
-        `Erro ao registrar saída de insumo: ${
-          error.response?.data?.message || error.message
-        }`,
-        "error"
-      );
-    }
-  };
 
   const getStatus = (lote) => {
     const isExpired = new Date(lote.data_validade) < new Date();
     if (isExpired) {
       return "Vencido";
     }
-    if (lote.quantidade_atual < 20) {
+    if (lote.quantidade_atual < 20) { // Threshold for "Baixo" stock
       return "Baixo";
     }
     return "Ativo";
@@ -206,8 +122,8 @@ const Estoque = () => {
       lote.numero_lote.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Access restriction for 'gestor' user
-  if (user?.tipo_usuario === "gestor") {
+  // Access restriction for 'gestor' and 'profissional_saude' users
+  if (user?.tipo_usuario === "gestor" || user?.tipo_usuario === "profissional_saude") {
     return (
       <StockPageContainer>
         <MessageContainer type="error">
@@ -220,174 +136,7 @@ const Estoque = () => {
 
   return (
     <StockPageContainer>
-      <Title>Gestão de Estoque</Title>
-
-      {feedbackMessage && (
-        <MessageContainer type={messageType}>
-          {messageType === "success" && <FaCheckCircle />}
-          {messageType === "error" && <FaExclamationCircle />}
-          {messageType === "info" && <FaInfoCircle />}
-          {feedbackMessage}
-        </MessageContainer>
-      )}
-
-      <ControlPanel>
-        <ActionCard>
-          <h4>
-            <FaPlus /> Registrar Entrada de Insumo
-          </h4>
-          <form onSubmit={handleAddSubmit}>
-            <div className="form-group">
-              <label>Unidade Hospitalar:</label>
-              <select
-                value={addForm.unidade_id}
-                onChange={(e) =>
-                  setAddForm({ ...addForm, unidade_id: e.target.value })
-                }
-                disabled={user?.tipo_usuario === "almoxarife_local"}
-                required
-              >
-                <option value="">Selecione a Unidade</option>
-                {unidades.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Insumo:</label>
-              <select
-                value={addForm.insumo_id}
-                onChange={(e) =>
-                  setAddForm({ ...addForm, insumo_id: e.target.value })
-                }
-                required
-              >
-                <option value="">Selecione o Insumo</option>
-                {insumos.map((insumo) => (
-                  <option key={insumo.id} value={insumo.id}>
-                    {insumo.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Número do Lote:</label>
-              <input
-                type="text"
-                value={addForm.numero_lote}
-                onChange={(e) =>
-                  setAddForm({ ...addForm, numero_lote: e.target.value })
-                }
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Data de Validade:</label>
-              <DatePicker
-                selected={addForm.data_validade}
-                onChange={(date) =>
-                  setAddForm({ ...addForm, data_validade: date })
-                }
-                dateFormat="dd/MM/yyyy"
-                placeholderText="Selecione a data"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Quantidade:</label>
-              <input
-                type="number"
-                value={addForm.quantidade}
-                onChange={(e) =>
-                  setAddForm({ ...addForm, quantidade: e.target.value })
-                }
-                min="1"
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-primary">
-              Registrar Entrada
-            </button>
-          </form>
-        </ActionCard>
-
-        <ActionCard>
-          <h4>
-            <FaMinus /> Registrar Saída de Insumo
-          </h4>
-          <form onSubmit={handleRemoveSubmit}>
-            <div className="form-group">
-              <label>Unidade Hospitalar:</label>
-              <select
-                value={removeForm.unidade_origem_id}
-                onChange={(e) =>
-                  setRemoveForm({
-                    ...removeForm,
-                    unidade_origem_id: e.target.value,
-                  })
-                }
-                disabled={user?.tipo_usuario === "almoxarife_local"}
-                required
-              >
-                <option value="">Selecione a Unidade</option>
-                {unidades.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Lote do Insumo (ID):</label>
-              <select
-                value={removeForm.lote_id}
-                onChange={(e) =>
-                  setRemoveForm({ ...removeForm, lote_id: e.target.value })
-                }
-                required
-              >
-                <option value="">Selecione o Lote</option>
-                {lotes
-                  .filter(
-                    (l) =>
-                      l.unidade_id ===
-                      parseInt(
-                        user?.tipo_usuario === "almoxarife_central"
-                          ? removeForm.unidade_origem_id
-                          : selectedUnit
-                      )
-                  )
-                  .map((lote) => (
-                    <option key={lote.id} value={lote.id}>
-                      {lote.numero_lote} ({lote.insumo_nome}) - Qtd:{" "}
-                      {lote.quantidade_atual}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Quantidade de Saída:</label>
-              <input
-                type="number"
-                value={removeForm.quantidade_saida}
-                onChange={(e) =>
-                  setRemoveForm({
-                    ...removeForm,
-                    quantidade_saida: e.target.value,
-                  })
-                }
-                min="1"
-                required
-              />
-            </div>
-            <button type="submit" className="btn btn-danger">
-              Registrar Saída
-            </button>
-          </form>
-        </ActionCard>
-      </ControlPanel>
+      <Title>Estoque Geral</Title>
 
       <StockTableContainer>
         <FilterGroup>
@@ -412,7 +161,7 @@ const Estoque = () => {
           )}
           <button
             className="btn btn-secondary"
-            onClick={() => fetchLotes(filterUnit || selectedUnit)}
+            onClick={() => fetchLotes(filterUnit)}
           >
             <FaSyncAlt /> Atualizar
           </button>
@@ -427,6 +176,7 @@ const Estoque = () => {
               <th>Unidade Medida</th>
               <th>Status</th>
               <th>Local de Armazenamento</th>
+              {user?.tipo_usuario === "almoxarife_central" && <th>Unidade</th>}
             </tr>
           </thead>
           <tbody>
@@ -452,11 +202,16 @@ const Estoque = () => {
                     {insumos.find((i) => i.id === lote.insumo_id)
                       ?.local_armazenamento || "N/A"}
                   </td>
+                  {user?.tipo_usuario === "almoxarife_central" && (
+                    <td>
+                      {unidades.find((u) => u.id === lote.unidade_id)?.nome || "N/A"}
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="7">
+                <td colSpan={user?.tipo_usuario === "almoxarife_central" ? "8" : "7"}>
                   <NoDataMessage>
                     Nenhum lote encontrado para esta unidade ou com os filtros
                     aplicados.
@@ -471,4 +226,4 @@ const Estoque = () => {
   );
 };
 
-export default Estoque;
+export default EstoqueGeral;

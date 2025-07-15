@@ -1,6 +1,6 @@
 -- Criar Banco de Dados
-CREATE DATABASE IF NOT EXISTS sgih_prod;
-USE sgih_prod;
+CREATE DATABASE IF NOT EXISTS sgih;
+USE sgih;
 
 -- Tabela para Unidades Hospitalares
 CREATE TABLE IF NOT EXISTS unidades_hospitalares (
@@ -122,8 +122,6 @@ CREATE TABLE IF NOT EXISTS solicitacoes_insumo (
     FOREIGN KEY (solicitante_id) REFERENCES usuarios(id)
 );
 
-USE sgih_prod;
-
 -- Inserir Unidades Hospitalares
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('Hospital Central FHEMIG', 'Rua Principal, 123, Centro', '31987654321', 'hospital.central@fhemig.gov.br');
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('UPA Leste FHEMIG', 'Av. Afonso Pena, 456, Boa Vista', '31998765432', 'upa.leste@fhemig.gov.br');
@@ -137,7 +135,6 @@ INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Lua
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Luana', 'luana@fhemig.gov.br', '$2b$10$QdhHNcgLTbXhaN8uKhqsterdNArfZfFQslbcxGPxa8/yMlfEYQ3vO', 'almoxarife_local', 1);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Marly', 'marly@fhemig.gov.br', '$2b$10$utsgmHt1y6EEHjyq9XTgSeoIRHp9kgJkPy5.USWZMkxQAPoOmimLS', 'profissional_saude', 1);
 
-USE sgih_prod;
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Gustavo', 'gustavo@fhemig.gov.br', '$2b$10$YqguZdt.go6N/FlzmaW0m.9v8TN7OJ8GVnx3wctk4VnNcrJ4DZB6G', 'gestor', 2);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Guilherme', 'guilherme@fhemig.gov.br', '$2b$10$OPZ/kaWHFa/DhVASF37PC.risjMeYgp1fE.FjLaCEAAaVb.n8I4Qy', 'almoxarife_local', 2);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Daniel', 'daniel@fhemig.gov.br', '$2b$10$AUWf6nhSxV/4o0CPFq98QOYhQSVZAaEAAB3BOwD8EVoeTMgI.Zk1K', 'profissional_saude', 2);
@@ -150,7 +147,6 @@ INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Sam
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('João', 'joao@fhemig.gov.br', '$2b$10$HXEIyjGPOpk416sUXelCNu8MFC6dQxWxotetyCXMmwtqK9b7yH/oi', 'almoxarife_local', 4);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Henrique', 'henrique@fhemig.gov.br', '$2b$10$wXcvcSQ3DmpsyIFMy4AOoO3rMVyniPtgjGJFCNionRp6YoGF5q6n2', 'profissional_saude', 4);
 
-USE sgih_prod;
 -- Inserir Insumos
 INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Luvas de Procedimento', 'Luvas descartáveis de látex ou nitrilo', 'caixa', 'Armazenar em local seco e protegido da luz');
 INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Álcool 70%', 'Solução de álcool etílico a 70% para assepsia', 'litro', 'Manter em local ventilado e afastado de fontes de calor');

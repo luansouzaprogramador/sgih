@@ -35,6 +35,8 @@ app.use('/api/agendamentos', agendamentoRoutes); // Already present and correct
 app.use('/api/alertas', alertRoutes);
 app.use('/api/relatorios', reportRoutes);
 app.use('/api/solicitacoes_insumo', solicitacaoRoutes); // <--- NEW
+app.use('/api/solicitacoes', solicitacaoRoutes); // <--- LINHA ADICIONADA/CORRIGIDA
+
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
