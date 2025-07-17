@@ -1,6 +1,9 @@
 const moment = require('moment');
 const { pool } = require('../database');
 
+// Constante para o ID da unidade central (agora uma unidade própria)
+const CENTRAL_UNIT_ID = 5; // ID da nova unidade 'Almoxarifado Central FHEMIG'
+
 async function checkAndCreateAlerts(unidade_id) {
   const connection = await pool.getConnection();
   try {

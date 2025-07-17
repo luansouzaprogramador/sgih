@@ -12,6 +12,7 @@ import {
   FaHospitalAlt,
   FaSignInAlt, // Icon for Entrada
   FaSignOutAlt, // Icon for Saída
+  FaExchangeAlt, // Icon for Solicitations
 } from "react-icons/fa";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -106,6 +107,8 @@ const Sidebar = () => {
   const isAlmoxarifeCentral =
     user && user.tipo_usuario === "almoxarife_central";
   const isAlmoxarifeLocal = user && user.tipo_usuario === "almoxarife_local";
+  const isProfissionalSaude = user && user.tipo_usuario === "profissional_saude";
+
 
   return (
     <SidebarContainer>
@@ -135,37 +138,66 @@ const Sidebar = () => {
           </NavItem>
         )}
 
+        {/* Itens de menu para Almoxarife Local */}
         {isAlmoxarifeLocal && (
           <>
             <NavItem>
               <Link
-                to="/entrada-insumo"
-                className={location.pathname === "/entrada-insumo" ? "active" : ""}
+                to="/entrada-insumo-local"
+                className={location.pathname === "/entrada-insumo-local" ? "active" : ""}
               >
-                <FaSignInAlt /> Entrada de Insumo
+                <FaSignInAlt /> Entrada de Insumo (Local)
               </Link>
             </NavItem>
             <NavItem>
               <Link
-                to="/saida-insumo"
-                className={location.pathname === "/saida-insumo" ? "active" : ""}
+                to="/saida-insumo-local"
+                className={location.pathname === "/saida-insumo-local" ? "active" : ""}
               >
-                <FaSignOutAlt /> Saída de Insumo
+                <FaSignOutAlt /> Saída de Insumo (Local)
+              </Link>
+            </NavItem>
+            <NavItem>
+              <Link
+                to="/solicitacoes-insumo-local"
+                className={location.pathname === "/solicitacoes-insumo-local" ? "active" : ""}
+              >
+                <FaExchangeAlt /> Solicitar Insumo (Local)
               </Link>
             </NavItem>
           </>
         )}
 
+        {/* Itens de menu para Almoxarife Central */}
         {isAlmoxarifeCentral && (
-          <NavItem>
-            <Link
-              to="/agendamentos"
-              className={location.pathname === "/agendamentos" ? "active" : ""}
-            >
-              <FaCalendarAlt /> Agendamentos
-            </Link>
-          </NavItem>
+          <>
+            <NavItem>
+              <Link
+                to="/entrada-insumo-central"
+                className={location.pathname === "/entrada-insumo-central" ? "active" : ""}
+              >
+                <FaSignInAlt /> Entrada de Insumo (Central)
+              </Link>
+            </NavItem>
+            <NavItem>
+              <Link
+                to="/saida-insumo-central"
+                className={location.pathname === "/saida-insumo-central" ? "active" : ""}
+              >
+                <FaSignOutAlt /> Saída de Insumo (Central)
+              </Link>
+            </NavItem>
+            <NavItem>
+              <Link
+                to="/agendamentos"
+                className={location.pathname === "/agendamentos" ? "active" : ""}
+              >
+                <FaCalendarAlt /> Agendamentos
+              </Link>
+            </NavItem>
+          </>
         )}
+
         {(isAlmoxarifeCentral || isAlmoxarifeLocal) && (
           <NavItem>
             <Link
@@ -176,14 +208,17 @@ const Sidebar = () => {
             </Link>
           </NavItem>
         )}
+
+        {/* Gerenciar Insumos é acessível a todos os tipos de usuário, mas a funcionalidade de adicionar/editar/excluir é restrita */}
         <NavItem>
           <Link
             to="/insumos"
             className={location.pathname === "/insumos" ? "active" : ""}
           >
-            <FaPrescriptionBottleAlt /> Gerenciar Insumos
+            <FaPrescriptionBottleAlt /> Gerenciar Insumo
           </Link>
         </NavItem>
+
         {isManager && (
           <NavItem>
             <Link

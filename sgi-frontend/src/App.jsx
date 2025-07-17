@@ -11,13 +11,18 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/logica/Login";
 import Dashboard from "./pages/logica/Dashboard";
 import Estoque from "./pages/logica/Estoque";
-import Entrada from "./pages/logica/EntradaInsumo";
-import Saida from "./pages/logica/SaidaInsumo";
+import EntradaInsumoLocal from "./pages/logica/EntradaInsumo"; // Renomeado para EntradaInsumoLocal
+import SaidaInsumoLocal from "./pages/logica/SaidaInsumo"; // Renomeado para SaidaInsumoLocal
 import Agendamentos from "./pages/logica/Agendamentos";
 import Relatorios from "./pages/logica/Relatorios";
 import Configuracoes from "./pages/logica/Configuracoes";
-import Insumos from "./pages/logica/Insumos"; // For managing insumo definitions
-import Unidades from "./pages/logica/Unidades"; // For managing hospital units
+import Insumos from "./pages/logica/Insumos"; // Para gerenciar definições de insumos (acessível a todos)
+import Unidades from "./pages/logica/Unidades"; // Para gerenciar unidades hospitalares
+
+// NOVOS COMPONENTES PARA ALMOXARIFE CENTRAL E LOCAL
+import EntradaInsumoCentral from "./pages/logica/EntradaInsumoCentral"; // Nova tela para Almoxarife Central
+import SaidaInsumoCentral from "./pages/logica/SaidaInsumoCentral";   // Nova tela para Almoxarife Central
+import SolicitacoesInsumoLocal from "./pages/logica/SolicitacoesInsumoLocal"; // Nova tela para Almoxarife Local fazer solicitações ao Central
 
 function App() {
   const { isAuthenticated, user } = useAuth();
@@ -40,21 +45,27 @@ function App() {
           }
         />
 
-        {/* Protected Routes */}
+        {/* Rotas Protegidas */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/estoque" element={<Estoque />} />
-          <Route path="/entrada-insumo" element={<Entrada />} />
-          <Route path="/saida-insumo" element={<Saida />} />
           <Route path="/agendamentos" element={<Agendamentos />} />
           <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/insumos" element={<Insumos />} />
-          <Route path="/unidades" element={<Unidades />} />
-          {/* Configuration and User Management for Managers only */}
-          <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/insumos" element={<Insumos />} /> {/* Gerenciar Insumos é geral */}
+          <Route path="/unidades" element={<Unidades />} /> {/* Gerenciar Unidades é para gestor */}
+          <Route path="/configuracoes" element={<Configuracoes />} /> {/* Configurações é para gestor */}
+
+          {/* Rotas Específicas para Almoxarife Local */}
+          <Route path="/entrada-insumo-local" element={<EntradaInsumoLocal />} />
+          <Route path="/saida-insumo-local" element={<SaidaInsumoLocal />} />
+          <Route path="/solicitacoes-insumo-local" element={<SolicitacoesInsumoLocal />} />
+
+          {/* Rotas Específicas para Almoxarife Central */}
+          <Route path="/entrada-insumo-central" element={<EntradaInsumoCentral />} />
+          <Route path="/saida-insumo-central" element={<SaidaInsumoCentral />} />
         </Route>
 
-        {/* Catch-all for 404 */}
+        {/* Catch-all para 404 */}
         <Route path="*" element={<h1>404 - Page Not Found</h1>} />
       </Routes>
     </Router>

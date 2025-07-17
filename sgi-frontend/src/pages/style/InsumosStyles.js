@@ -250,3 +250,49 @@ export const NoDataMessage = styled.p`
   background-color: #f0f0f0;
   border-radius: 8px;
 `;
+
+// NOVO: Componente FilterGroup exportado
+export const FilterGroup = styled.div`
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  align-items: center;
+
+  label {
+    font-weight: 600;
+    color: #4a4a4a;
+  }
+
+  select, input[type="text"] {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1em;
+    color: #333;
+    background-color: #fdfdff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus {
+      border-color: #007bff;
+      box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+      outline: none;
+    }
+  }
+
+  button {
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+
+    &:hover {
+      background-color: #5a6268;
+      transform: translateY(-1px);
+    }
+  }
+`;

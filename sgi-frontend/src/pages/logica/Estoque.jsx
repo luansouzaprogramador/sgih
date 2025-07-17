@@ -18,6 +18,9 @@ import {
   NoDataMessage,
 } from "../style/EstoqueStyles"; // Import styled components
 
+// Constante para o ID da unidade central (agora uma unidade própria)
+const CENTRAL_UNIT_ID = 5; // ID da nova unidade 'Almoxarifado Central FHEMIG'
+
 const EstoqueGeral = () => {
   const { user } = useAuth();
   const [insumos, setInsumos] = useState([]);
@@ -26,8 +29,8 @@ const EstoqueGeral = () => {
 
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
-  // For almoxarife_central, filterUnit can be any unit or empty for all.
-  // For almoxarife_local, filterUnit is always their own unit.
+  // Para almoxarife_central, filterUnit pode ser qualquer unidade ou 'all' para todas.
+  // Para almoxarife_local, filterUnit é sempre a sua própria unidade.
   const [filterUnit, setFilterUnit] = useState(user?.unidade_id || "");
 
   const fetchInsumos = async () => {
@@ -36,7 +39,6 @@ const EstoqueGeral = () => {
       setInsumos(response.data);
     } catch (error) {
       console.error("Error fetching insumos:", error);
-      // No displayMessage here, as it's a background fetch
     }
   };
 
@@ -46,44 +48,47 @@ const EstoqueGeral = () => {
       setUnidades(response.data);
     } catch (error) {
       console.error("Error fetching units:", error);
-      // No displayMessage here, as it's a background fetch
     }
   };
 
   const fetchLotes = async (unitId) => {
     if (!user) return;
 
-    let endpoint = `/lotes/${unitId}`; // Default for a specific unit
-    if (user.tipo_usuario === "almoxarife_central" && (!unitId || unitId === "all")) {
-      // Almoxarife central can see all lots if "Todas as Unidades" is selected
-      // Assuming a backend route like /lotes/all exists or iterating through units
-      // For simplicity, if unitId is 'all', we'll call the general /lotes route (if backend supports it for central)
-      // Otherwise, we'll fetch for each unit and combine.
-      // Given the current loteRoutes.js, it expects a unitId. So we'll fetch for each unit if 'all' is selected.
-      endpoint = `/lotes/${unitId || user.unidade_id}`; // Fallback to user's unit if no unitId is provided for central
-    } else if (user.tipo_usuario === "almoxarife_local") {
-      endpoint = `/lotes/${user.unidade_id}`;
-    }
+    let endpoint;
+    let unitToFetch = unitId;
 
+    if (user.tipo_usuario === "almoxarife_local") {
+      unitToFetch = user.unidade_id; // Almoxarife local sempre vê sua própria unidade
+      endpoint = `/lotes/${unitToFetch}`;
+    } else if (user.tipo_usuario === "almoxarife_central") {
+      if (unitId === "all") {
+        // Almoxarife central pode ver todos os lotes de todas as unidades
+        endpoint = null; // Indicar que faremos múltiplos fetches
+      } else {
+        // Almoxarife central pode ver o estoque de uma unidade específica (incluindo o central)
+        endpoint = `/lotes/${unitToFetch}`;
+      }
+    } else {
+      // Outros tipos de usuário não devem acessar esta página, mas para segurança
+      return;
+    }
 
     try {
       let responseData = [];
-      if (user.tipo_usuario === "almoxarife_central" && (!unitId || unitId === "all")) {
-        // Fetch lots for all units for central almoxarife
+      if (user.tipo_usuario === "almoxarife_central" && unitId === "all") {
         const allUnits = await api.get("/unidades");
         const lotesPromises = allUnits.data.map(unit => api.get(`/lotes/${unit.id}`));
         const allLotesResponses = await Promise.all(lotesPromises);
         allLotesResponses.forEach(res => {
           responseData = [...responseData, ...res.data];
         });
-      } else {
+      } else if (endpoint) {
         const response = await api.get(endpoint);
         responseData = response.data;
       }
       setLotes(responseData);
     } catch (error) {
       console.error("Error fetching lotes:", error);
-      // This page doesn't have a feedback message container, so log to console
     }
   };
 
@@ -96,8 +101,9 @@ const EstoqueGeral = () => {
         setFilterUnit(user.unidade_id);
         fetchLotes(user.unidade_id);
       } else if (user.tipo_usuario === "almoxarife_central") {
-        setFilterUnit("all"); // Default to "Todas as Unidades" for central
-        fetchLotes("all"); // Fetch all for central by default
+        // Almoxarife central inicia mostrando o estoque central por padrão (sua própria unidade_id)
+        setFilterUnit(user.unidade_id);
+        fetchLotes(user.unidade_id);
       }
     }
   }, [user]);
@@ -116,7 +122,7 @@ const EstoqueGeral = () => {
       return "Vencido";
     }
     // Use lote.estoque_minimo for "Baixo" stock status
-    if (lote.quantidade_atual <= lote.estoque_minimo) { 
+    if (lote.quantidade_atual <= lote.estoque_minimo) {
       return "Baixo";
     }
     return "Ativo";
@@ -157,8 +163,10 @@ const EstoqueGeral = () => {
               value={filterUnit}
               onChange={(e) => setFilterUnit(e.target.value)}
             >
+              {/* Agora o Almoxarifado Central é uma unidade na lista */}
+              <option value={user.unidade_id}>Estoque Central</option>
               <option value="all">Todas as Unidades</option>
-              {unidades.map((unit) => (
+              {unidades.filter(unit => unit.id !== user.unidade_id).map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {unit.nome}
                 </option>

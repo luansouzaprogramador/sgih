@@ -6,6 +6,9 @@ const { checkAndCreateAlerts } = require('../utils/alertService');
 
 const router = express.Router();
 
+// Constante para o ID da unidade central (agora uma unidade própria)
+const CENTRAL_UNIT_ID = 5; // ID da nova unidade 'Almoxarifado Central FHEMIG'
+
 // Rota existente para obter lotes para uma unidade específica
 router.get('/:unidadeId', authenticateToken, async (req, res) => {
   const { unidadeId } = req.params;
@@ -15,7 +18,13 @@ router.get('/:unidadeId', authenticateToken, async (req, res) => {
       return res.status(403).send('Acesso negado: Almoxarife local só pode ver lotes de sua própria unidade.');
     }
 
-    await checkAndCreateAlerts(unidadeId); // Garante que os alertas são verificados para a unidade
+    // Se o usuário é almoxarife central, ele pode ver lotes da unidade central ou de outras unidades
+    // (se a unidadeId for diferente de 'all' ou da unidade central, ele está buscando uma unidade específica)
+    // A chamada a checkAndCreateAlerts deve ser feita para a unidade que está sendo visualizada/operada.
+    // Se unidadeId é 'all' para almoxarife central, não chamamos checkAndCreateAlerts aqui, pois é uma agregação.
+    if (unidadeId !== 'all') {
+        await checkAndCreateAlerts(parseInt(unidadeId)); // Garante que os alertas são verificados para a unidade
+    }
 
     // Adicionado i.estoque_minimo na seleção
     const [rows] = await pool.execute(
@@ -42,6 +51,11 @@ router.post('/', authenticateToken, authorizeRoles(['almoxarife_central', 'almox
   if (req.user.tipo_usuario === 'almoxarife_local' && req.user.unidade_id != unidade_id) {
     return res.status(403).send('Acesso negado: Almoxarife local só pode criar lotes para sua própria unidade.');
   }
+  // Almoxarife central só pode criar lotes para a unidade central (que agora é o req.user.unidade_id)
+  if (req.user.tipo_usuario === 'almoxarife_central' && req.user.unidade_id != unidade_id) {
+    return res.status(403).send('Acesso negado: Almoxarife central só pode criar lotes para o estoque central.');
+  }
+
 
   const connection = await pool.getConnection();
   try {
@@ -85,6 +99,10 @@ router.put('/:id', authenticateToken, authorizeRoles(['almoxarife_central', 'alm
   if (req.user.tipo_usuario === 'almoxarife_local' && req.user.unidade_id != unidade_id) {
     return res.status(403).send('Acesso negado: Almoxarife local só pode atualizar lotes de sua própria unidade.');
   }
+  // Almoxarife central só pode atualizar lotes da unidade central (que agora é o req.user.unidade_id)
+  if (req.user.tipo_usuario === 'almoxarife_central' && req.user.unidade_id != unidade_id) {
+    return res.status(403).send('Acesso negado: Almoxarife central só pode atualizar lotes do estoque central.');
+  }
 
   try {
     const [result] = await pool.execute(
@@ -95,7 +113,12 @@ router.put('/:id', authenticateToken, authorizeRoles(['almoxarife_central', 'alm
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Lote não encontrado.' });
     }
-    await checkAndCreateAlerts(unidade_id); // Chamar após a atualização do lote
+    // Chamar checkAndCreateAlerts para a unidade do lote atualizado
+    const [loteUnit] = await pool.execute('SELECT unidade_id FROM lotes WHERE id = ?', [id]);
+    if (loteUnit.length > 0) {
+      await checkAndCreateAlerts(loteUnit[0].unidade_id);
+    }
+
     res.json({ message: 'Lote atualizado com sucesso.' });
   } catch (error) {
     console.error('Erro ao atualizar lote:', error);
@@ -107,24 +130,39 @@ router.put('/:id', authenticateToken, authorizeRoles(['almoxarife_central', 'alm
 router.post('/entrada-lote-em-massa', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   const { entries } = req.body;
   const responsavel_id = req.user.userId;
-  const results = []; // Para armazenar o resultado de cada entrada
 
   if (!Array.isArray(entries) || entries.length === 0) {
     return res.status(400).json({ message: 'Nenhuma entrada de lote fornecida.' });
   }
 
+  const results = []; // Para armazenar o resultado de cada entrada
+
   for (const entry of entries) {
     const { insumo_id, numero_lote, quantidade, data_validade, unidade_id } = entry;
 
-    // Validação individual para cada entrada
+    // Validação de permissão baseada na unidade_id da entrada
+    if (req.user.tipo_usuario === 'almoxarife_local' && req.user.unidade_id != unidade_id) {
+      results.push({ success: false, message: `Acesso negado: Almoxarife local só pode criar lotes para sua própria unidade. (Insumo ID: ${insumo_id || 'N/A'}, Lote: ${numero_lote || 'N/A'})` });
+      continue;
+    }
+    // Para almoxarife_central, a unidade_id da entrada DEVE ser o req.user.unidade_id (que agora é o CENTRAL_UNIT_ID)
+    if (req.user.tipo_usuario === 'almoxarife_central' && req.user.unidade_id != unidade_id) {
+      results.push({ success: false, message: `Acesso negado: Almoxarife central só pode registrar entradas para o estoque central (Unidade ID: ${req.user.unidade_id}). (Insumo ID: ${insumo_id || 'N/A'}, Lote: ${numero_lote || 'N/A'}, Unidade Fornecida: ${unidade_id || 'N/A'})` });
+      continue;
+    }
+
+    // Validação básica para todas as entradas
     if (!insumo_id || !numero_lote || !quantidade || !data_validade || quantidade <= 0 || !unidade_id) {
       results.push({ success: false, message: `Dados incompletos ou inválidos para um dos itens (Insumo ID: ${insumo_id || 'N/A'}, Lote: ${numero_lote || 'N/A'}, Qtd: ${quantidade || 'N/A'}, Validade: ${data_validade || 'N/A'}, Unidade: ${unidade_id || 'N/A'}).` });
       continue; // Pula para a próxima entrada no loop
     }
 
+    const connection = await pool.getConnection(); // Obtém uma nova conexão para cada iteração
     try {
+      await connection.beginTransaction();
+
       // Verifica se o lote existe para este insumo e unidade
-      const [existingLotes] = await pool.execute(
+      const [existingLotes] = await connection.execute(
         'SELECT * FROM lotes WHERE insumo_id = ? AND numero_lote = ? AND unidade_id = ?',
         [insumo_id, numero_lote, unidade_id]
       );
@@ -149,13 +187,13 @@ router.post('/entrada-lote-em-massa', authenticateToken, authorizeRoles(['almoxa
         updateQuery += ' WHERE id = ?';
         updateParams.push(lote.id);
 
-        await pool.execute(updateQuery, updateParams);
+        await connection.execute(updateQuery, updateParams);
 
         loteId = lote.id;
         actionMessage = 'Lote existente atualizado.';
       } else {
         // Cria um novo lote
-        const [result] = await pool.execute(
+        const [result] = await connection.execute(
           'INSERT INTO lotes (insumo_id, numero_lote, quantidade_inicial, quantidade_atual, data_validade, unidade_id) VALUES (?, ?, ?, ?, ?, ?)',
           [insumo_id, numero_lote, quantidade, quantidade, data_validade, unidade_id] // Adicionado quantidade_inicial aqui
         );
@@ -164,7 +202,7 @@ router.post('/entrada-lote-em-massa', authenticateToken, authorizeRoles(['almoxa
       }
 
       // Registra a movimentação para a entrada
-      await pool.execute(
+      await connection.execute(
         'INSERT INTO movimentacoes (lote_id, tipo, quantidade, responsavel_id, unidade_origem_id, unidade_destino_id) VALUES (?, ?, ?, ?, ?, ?)',
         [loteId, 'entrada', quantidade, responsavel_id, unidade_id, unidade_id] // Para entrada, origem e destino são a mesma unidade
       );
@@ -174,9 +212,14 @@ router.post('/entrada-lote-em-massa', authenticateToken, authorizeRoles(['almoxa
       // Após a entrada bem-sucedida, verifica alertas (estoque crítico, vencimento)
       await checkAndCreateAlerts(unidade_id);
 
+      await connection.commit(); // Confirma a transação para esta entrada individual
+
     } catch (error) {
+      await connection.rollback(); // Reverte a transação para esta entrada individual
       console.error(`Erro ao processar entrada para insumo ${insumo_id}, lote ${numero_lote}:`, error);
       results.push({ success: false, message: `Erro ao processar entrada para insumo ${insumo_id}, lote ${numero_lote}: ${error.message}` });
+    } finally {
+      connection.release(); // Libera a conexão
     }
   }
 
@@ -256,10 +299,16 @@ router.put('/:id/status', authenticateToken, authorizeRoles(['almoxarife_central
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Lote não encontrado.' });
     }
+    // Chamar checkAndCreateAlerts para a unidade do lote atualizado
+    const [loteUnit] = await pool.execute('SELECT unidade_id FROM lotes WHERE id = ?', [id]);
+    if (loteUnit.length > 0) {
+      await checkAndCreateAlerts(loteUnit[0].unidade_id);
+    }
+
     res.json({ message: 'Status do lote atualizado com sucesso.' });
   } catch (error) {
     console.error('Erro ao atualizar status do lote:', error);
-    res.status(500).json({ message: 'Erro no servidor.' });
+    res.status(500).json({ message: 'Erro no servidor ao atualizar status do lote.' });
   }
 });
 
@@ -274,6 +323,11 @@ router.post('/transferir', authenticateToken, authorizeRoles(['almoxarife_centra
   if (unidade_origem_id === unidade_destino_id) {
     return res.status(400).json({ message: 'A unidade de origem não pode ser a mesma que a unidade de destino.' });
   }
+  // Garantir que a origem da transferência é o estoque central se o usuário é almoxarife central
+  if (req.user.tipo_usuario === 'almoxarife_central' && unidade_origem_id != req.user.unidade_id) {
+    return res.status(403).send('Acesso negado: Almoxarife central só pode transferir do estoque central.');
+  }
+
 
   const connection = await pool.getConnection(); // Obtém uma conexão para transação
   try {

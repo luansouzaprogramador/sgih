@@ -16,9 +16,12 @@ import {
   NoDataMessage,
   MessageContainer,
   FilterGroup,
-} from "../style/EstoqueStyles";
+} from "../style/EstoqueStyles"; // Reutilizando estilos existentes
 
-const SaidaInsumo = () => {
+// Constante para o ID da unidade central (agora uma unidade própria)
+const CENTRAL_UNIT_ID = 5; // ID da nova unidade 'Almoxarifado Central FHEMIG'
+
+const SaidaInsumoCentral = () => {
   const { user } = useAuth();
   const [solicitacoes, setSolicitacoes] = useState([]);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
@@ -36,7 +39,7 @@ const SaidaInsumo = () => {
   };
 
   const fetchSolicitacoes = async () => {
-    if (!user || user.tipo_usuario !== "almoxarife_local") {
+    if (!user || user.tipo_usuario !== "almoxarife_central") {
       setSolicitacoes([]);
       setLoading(false);
       return;
@@ -44,15 +47,12 @@ const SaidaInsumo = () => {
 
     try {
       setLoading(true);
-      const response = await api.get(`/solicitacoes?status=${filterStatus}`);
-      // Filter client-side to ensure only requests for the local almoxarife's unit are shown
-      const filteredByUnit = response.data.filter(
-        (sol) => sol.unidade_solicitante_id === user.unidade_id
-      );
-      setSolicitacoes(filteredByUnit);
+      // Almoxarife central busca solicitações de almoxarifes locais
+      const response = await api.get(`/solicitacoes/almoxarifes-locais?status=${filterStatus}`);
+      setSolicitacoes(response.data);
     } catch (error) {
-      console.error("Error fetching solicitations:", error);
-      displayMessage("Erro ao carregar solicitações de insumo.", "error");
+      console.error("Erro ao carregar solicitações de almoxarifes locais:", error);
+      displayMessage("Erro ao carregar solicitações de insumo de almoxarifes locais.", "error");
       setSolicitacoes([]);
     } finally {
       setLoading(false);
@@ -65,11 +65,11 @@ const SaidaInsumo = () => {
 
   const handleApproveSolicitation = async (solicitacaoId) => {
     try {
-      await api.put(`/solicitacoes/${solicitacaoId}/aprovar`);
-      displayMessage("Solicitação aprovada e estoque atualizado!", "success");
+      await api.put(`/solicitacoes/almoxarifes-locais/${solicitacaoId}/aprovar`);
+      displayMessage("Solicitação aprovada e estoque central atualizado!", "success");
       fetchSolicitacoes();
     } catch (error) {
-      console.error("Error approving solicitation:", error);
+      console.error("Erro ao aprovar solicitação:", error);
       displayMessage(
         `Erro ao aprovar solicitação: ${
           error.response?.data?.message || error.message
@@ -81,13 +81,11 @@ const SaidaInsumo = () => {
 
   const handleRejectSolicitation = async (solicitacaoId) => {
     try {
-      await api.put(`/solicitacoes/${solicitacaoId}/status`, {
-        status: "rejeitada",
-      });
+      await api.put(`/solicitacoes/almoxarifes-locais/${solicitacaoId}/rejeitar`);
       displayMessage("Solicitação rejeitada com sucesso!", "info");
       fetchSolicitacoes();
     } catch (error) {
-      console.error("Error rejecting solicitation:", error);
+      console.error("Erro ao rejeitar solicitação:", error);
       displayMessage(
         `Erro ao rejeitar solicitação: ${
           error.response?.data?.message || error.message
@@ -97,7 +95,7 @@ const SaidaInsumo = () => {
     }
   };
 
-  if (user?.tipo_usuario !== "almoxarife_local") {
+  if (user?.tipo_usuario !== "almoxarife_central") {
     return (
       <StockPageContainer>
         <MessageContainer type="error">
@@ -110,7 +108,7 @@ const SaidaInsumo = () => {
 
   return (
     <StockPageContainer>
-      <Title>Registrar Saída de Insumo (Solicitações)</Title>
+      <Title>Registrar Saída de Insumo (Estoque Central)</Title>
 
       {feedbackMessage && (
         <MessageContainer type={messageType}>
@@ -132,7 +130,7 @@ const SaidaInsumo = () => {
             <option value="pendente">Pendentes</option>
             <option value="aprovada">Aprovadas</option>
             <option value="rejeitada">Rejeitadas</option>
-            <option value="">Todas</option> {/* Removido 'concluida' */}
+            <option value="">Todas</option>
           </select>
           <button className="btn btn-secondary" onClick={fetchSolicitacoes}>
             <FaSyncAlt /> Atualizar
@@ -145,7 +143,7 @@ const SaidaInsumo = () => {
           <Table>
             <thead>
               <tr>
-                <th>ID</th>
+                <th>ID Solicitação</th>
                 <th>Insumo</th>
                 <th>Quantidade Solicitada</th>
                 <th>Status</th>
@@ -206,7 +204,7 @@ const SaidaInsumo = () => {
           </Table>
         ) : (
           <NoDataMessage>
-            Nenhuma solicitação de insumo encontrada para o status selecionado.
+            Nenhuma solicitação de insumo de almoxarifes locais encontrada para o status selecionado.
           </NoDataMessage>
         )}
       </ActionCard>
@@ -214,4 +212,4 @@ const SaidaInsumo = () => {
   );
 };
 
-export default SaidaInsumo;
+export default SaidaInsumoCentral;

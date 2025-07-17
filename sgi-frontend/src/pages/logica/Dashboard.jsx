@@ -22,6 +22,9 @@ import {
   NoDataMessage,
 } from "../style/DashboardStyles"; // Import styled components
 
+// Constante para o ID da unidade central (agora uma unidade própria)
+const CENTRAL_UNIT_ID = 5; // ID da nova unidade 'Almoxarifado Central FHEMIG'
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
@@ -30,7 +33,7 @@ const Dashboard = () => {
     criticalStockAlerts: 0,
     recentMovements: [],
     alerts: [],
-    solicitacoes: [], // Changed from userRequests to solicitacoes to hold all types
+    solicitacoes: [],
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,18 +52,15 @@ const Dashboard = () => {
     let totalInsumos = 0;
     let pendingDeliveries = 0;
     let criticalStockAlertsCount = 0;
-    let recentMovements = [];
     let alerts = [];
-    let fetchedSolicitacoes = []; // Variable to store fetched solicitations
+    let recentMovements = [];
+    let fetchedSolicitacoes = [];
 
     try {
-      // Logic for 'almoxarife_local' and 'almoxarife_central'
       if (isAlmoxarifeLocal || isAlmoxarifeCentral) {
         const insumosRes = await api.get("/insumos");
         totalInsumos = insumosRes.data.length;
 
-        // Almoxarife Local e Central chamam a rota geral /agendamentos
-        // O backend já filtra com base no user.unidade_id do token
         const agendamentosRes = await api.get("/agendamentos");
         
         if (isAlmoxarifeCentral) {
@@ -68,17 +68,16 @@ const Dashboard = () => {
             (a) => a.status === "pendente" || a.status === "em_transito"
           ).length;
         } else if (isAlmoxarifeLocal) {
-          // Almoxarife Local só conta entregas pendentes para sua unidade como destino
           pendingDeliveries = agendamentosRes.data.filter(
             (a) => (a.status === "pendente" || a.status === "em_transito") && a.unidade_destino_id === user.unidade_id
           ).length;
         }
 
-
         try {
-          // Chamada para alertas de estoque crítico
+          // Almoxarife central: alertas do estoque central (agora user.unidade_id)
+          // Almoxarife local: alertas da sua própria unidade
           const criticalStockResponse = await api.get(
-            `/alertas/estoque_critico/${isAlmoxarifeCentral ? "all" : user.unidade_id}`
+            `/alertas/estoque_critico/${user.unidade_id}`
           );
           criticalStockAlertsCount = criticalStockResponse.data.length;
         } catch (err) {
@@ -86,17 +85,11 @@ const Dashboard = () => {
         }
 
         // Chamada para alertas gerais
-        const alertsEndpoint =
-          isAlmoxarifeLocal
-            ? `/alertas/${user.unidade_id}`
-            : "/alertas/";
+        const alertsEndpoint = `/alertas/${user.unidade_id}`; // Agora usa user.unidade_id para ambos
         const alertsRes = await api.get(alertsEndpoint);
         alerts = alertsRes.data;
 
-        const movementsEndpoint =
-          isAlmoxarifeLocal
-            ? `/movimentacoes/${user.unidade_id}?periodo=7`
-            : `/movimentacoes/?periodo=7`;
+        const movementsEndpoint = `/movimentacoes/${user.unidade_id}?periodo=7`; // Agora usa user.unidade_id para ambos
         const movementsRes = await api.get(movementsEndpoint);
         recentMovements = movementsRes.data.slice(0, 5);
       }
@@ -105,6 +98,7 @@ const Dashboard = () => {
       // Only fetch if the user is a ProfissionalSaude or Gestor
       if (isProfissionalSaude || isGestor) {
         try {
+          // Solicitações de Profissional de Saúde/Gestor para Almoxarife Local
           const solicitacoesResponse = await api.get('/solicitacoes');
           fetchedSolicitacoes = solicitacoesResponse.data;
         } catch (err) {
@@ -131,14 +125,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [user]); // Depend on user to re-fetch if user changes
+  }, [user]);
 
-  // This function is no longer needed in Dashboard for almoxarifes,
-  // but keeping it here as a placeholder if it were to be used by other roles.
   const handleUpdateSolicitationStatus = async (solicitacaoId, status) => {
     try {
       await api.put(`/solicitacoes/${solicitacaoId}/status`, { status });
-      // Re-fetch data to update the table
       fetchDashboardData();
     } catch (err) {
       console.error(`Erro ao atualizar status da solicitação ${solicitacaoId} para ${status}:`, err);
@@ -185,7 +176,7 @@ const Dashboard = () => {
                     <th>Quantidade</th>
                     <th>Status</th>
                     <th>Data da Solicitação</th>
-                    <th>Unidade Solicitante</th> {/* Added this for completeness, though it's "my" unit */}
+                    <th>Unidade Solicitante</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -232,11 +223,7 @@ const Dashboard = () => {
               </StatCard>
             </StatsGrid>
 
-            {/* A seção de Solicitações de Insumos foi movida para a página de Saída de Insumo para almoxarifes locais */}
-            {/* e removida do dashboard para almoxarifes centrais. */}
-
-            {/* Keep existing sections below requests table */}
-            <SectionTitle>Alertas Ativos</SectionTitle>
+            <SectionTitle style={{ marginTop: "40px" }}>Alertas Ativos</SectionTitle>
             <Card>
               {stats.alerts.length > 0 ? (
                 <AlertList>
@@ -269,7 +256,7 @@ const Dashboard = () => {
 
             <SectionTitle style={{ marginTop: "40px" }}>
               Últimas Movimentações{" "}
-              {isAlmoxarifeLocal && "na sua Unidade"}
+              {isAlmoxarifeLocal ? "na sua Unidade" : "no Estoque Central"}
             </SectionTitle>
             <Card>
               {stats.recentMovements.length > 0 ? (
