@@ -6,8 +6,7 @@ const router = express.Router();
 
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    // Seleciona todas as colunas, incluindo estoque_minimo
-    const [rows] = await pool.execute('SELECT *, estoque_minimo FROM insumos');
+    const [rows] = await pool.execute('SELECT * FROM insumos');
     res.json(rows);
   } catch (error) {
     console.error('Erro ao carregar insumos:', error);
@@ -17,11 +16,11 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // Apenas 'almoxarife_central' ou 'almoxarife_local' pode criar insumos
 router.post('/', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
-  const { nome, descricao, unidade_medida, local_armazenamento, estoque_minimo } = req.body;
+  const { nome, descricao, unidade_medida, local_armazenamento } = req.body;
   try {
     const [result] = await pool.execute(
-      'INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES (?, ?, ?, ?, ?)',
-      [nome, descricao, unidade_medida, local_armazenamento, estoque_minimo]
+      'INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES (?, ?, ?, ?)',
+      [nome, descricao, unidade_medida, local_armazenamento]
     );
     res.status(201).json({ message: 'Insumo criado com sucesso', insumoId: result.insertId });
   } catch (error) {
@@ -33,12 +32,12 @@ router.post('/', authenticateToken, authorizeRoles(['almoxarife_central', 'almox
 // Apenas 'almoxarife_central' ou 'almoxarife_local' pode atualizar insumos
 router.put('/:id', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   const { id } = req.params;
-  const { nome, descricao, unidade_medida, local_armazenamento, estoque_minimo } = req.body;
+  const { nome, descricao, unidade_medida, local_armazenamento } = req.body;
 
   try {
     const [result] = await pool.execute(
-      'UPDATE insumos SET nome = ?, descricao = ?, unidade_medida = ?, local_armazenamento = ?, estoque_minimo = ? WHERE id = ?',
-      [nome, descricao, unidade_medida, local_armazenamento, estoque_minimo, id]
+      'UPDATE insumos SET nome = ?, descricao = ?, unidade_medida = ?, local_armazenamento = ? WHERE id = ?',
+      [nome, descricao, unidade_medida, local_armazenamento, id]
     );
 
     if (result.affectedRows === 0) {

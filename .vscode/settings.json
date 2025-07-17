@@ -9,7 +9,7 @@
       "server": "localhost",
       "port": 3306,
       "driver": "MySQL",
-      "name": "sgih",
+      "name": "sgih_test",
       "username": "root",
       "database": "sgih"
     }

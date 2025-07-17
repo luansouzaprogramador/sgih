@@ -4,10 +4,8 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Rota para buscar o relatório de estoque crítico
 router.get('/estoque_critico', authenticateToken, authorizeRoles(['almoxarife_central', 'almoxarife_local']), async (req, res) => {
   try {
-    // A consulta agora usa i.estoque_minimo para determinar o estoque crítico
     const [rows] = await pool.execute(`
             SELECT l.id AS lote_id, i.nome AS insumo_nome, l.quantidade_atual, uh.nome AS unidade_nome
             FROM lotes l

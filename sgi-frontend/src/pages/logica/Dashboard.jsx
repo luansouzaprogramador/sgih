@@ -59,24 +59,33 @@ const Dashboard = () => {
         const insumosRes = await api.get("/insumos");
         totalInsumos = insumosRes.data.length;
 
+        // Almoxarife Local e Central chamam a rota geral /agendamentos
+        // O backend já filtra com base no user.unidade_id do token
+        const agendamentosRes = await api.get("/agendamentos");
+        
         if (isAlmoxarifeCentral) {
-          const agendamentosRes = await api.get("/agendamentos/");
           pendingDeliveries = agendamentosRes.data.filter(
             (a) => a.status === "pendente" || a.status === "em_transito"
           ).length;
-        } else {
-          pendingDeliveries = 0;
+        } else if (isAlmoxarifeLocal) {
+          // Almoxarife Local só conta entregas pendentes para sua unidade como destino
+          pendingDeliveries = agendamentosRes.data.filter(
+            (a) => (a.status === "pendente" || a.status === "em_transito") && a.unidade_destino_id === user.unidade_id
+          ).length;
         }
 
+
         try {
+          // Chamada para alertas de estoque crítico
           const criticalStockResponse = await api.get(
             `/alertas/estoque_critico/${isAlmoxarifeCentral ? "all" : user.unidade_id}`
           );
           criticalStockAlertsCount = criticalStockResponse.data.length;
         } catch (err) {
-          console.error("Error fetching critical stock alerts:", err);
+          console.error("Erro ao carregar alertas de estoque crítico:", err);
         }
 
+        // Chamada para alertas gerais
         const alertsEndpoint =
           isAlmoxarifeLocal
             ? `/alertas/${user.unidade_id}`
@@ -99,7 +108,7 @@ const Dashboard = () => {
           const solicitacoesResponse = await api.get('/solicitacoes');
           fetchedSolicitacoes = solicitacoesResponse.data;
         } catch (err) {
-          console.error("Error fetching solicitations:", err);
+          console.error("Erro ao carregar solicitações:", err);
           setError("Erro ao carregar solicitações.");
         }
       }
@@ -113,7 +122,7 @@ const Dashboard = () => {
         solicitacoes: fetchedSolicitacoes,
       });
     } catch (err) {
-      console.error("Error fetching dashboard data:", err);
+      console.error("Erro ao carregar dados do dashboard:", err);
       setError("Erro ao carregar dados do dashboard.");
     } finally {
       setLoading(false);
@@ -132,7 +141,7 @@ const Dashboard = () => {
       // Re-fetch data to update the table
       fetchDashboardData();
     } catch (err) {
-      console.error(`Error updating solicitation ${solicitacaoId} status to ${status}:`, err);
+      console.error(`Erro ao atualizar status da solicitação ${solicitacaoId} para ${status}:`, err);
       setError("Erro ao atualizar status da solicitação.");
     }
   };

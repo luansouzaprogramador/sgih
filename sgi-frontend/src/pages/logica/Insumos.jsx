@@ -31,6 +31,7 @@ const Insumos = () => {
     descricao: "",
     unidade_medida: "",
     local_armazenamento: "",
+    estoque_minimo: 0, // Adicionado estoque_minimo no estado do formulário
   });
   const [feedbackMessage, setFeedbackMessage] = useState(null);
   const [messageType, setMessageType] = useState(null);
@@ -107,8 +108,9 @@ const Insumos = () => {
       descricao: "",
       unidade_medida: "",
       local_armazenamento: "",
+      estoque_minimo: 0, // Resetar também o estoque_minimo após submissão
     });
-    fetchInsumos();
+    fetchInsumos(); // Recarregar a lista de insumos
   };
 
   const handleSubmitRequest = async (e) => {
@@ -139,6 +141,7 @@ const Insumos = () => {
       descricao: insumo.descricao,
       unidade_medida: insumo.unidade_medida,
       local_armazenamento: insumo.local_armazenamento,
+      estoque_minimo: insumo.estoque_minimo, // Carregar estoque_minimo para edição
     });
     displayMessage("Editando insumo. Faça suas alterações.", "info");
   };
@@ -148,7 +151,7 @@ const Insumos = () => {
       try {
         await api.delete(`/insumos/${id}`);
         displayMessage("Insumo excluído com sucesso!", "success");
-        fetchInsumos();
+        fetchInsumos(); // Recarregar a lista de insumos
       } catch (error) {
         console.error("Erro ao excluir insumo:", error);
         displayMessage(
@@ -238,6 +241,17 @@ const Insumos = () => {
                   onChange={handleFormChange}
                 />
               </div>
+              <div className="form-group">
+                <label>Estoque Mínimo:</label>
+                <input
+                  type="number"
+                  name="estoque_minimo"
+                  value={formData.estoque_minimo}
+                  onChange={handleFormChange}
+                  min="0"
+                  required
+                />
+              </div>
             </FormGrid>
             <button type="submit" className="btn btn-primary">
               {editingInsumo ? "Atualizar Insumo" : "Cadastrar Insumo"}
@@ -253,6 +267,7 @@ const Insumos = () => {
                     descricao: "",
                     unidade_medida: "",
                     local_armazenamento: "",
+                    estoque_minimo: 0,
                   });
                   displayMessage("Edição cancelada.", "info");
                 }}
@@ -322,7 +337,7 @@ const Insumos = () => {
                 <th>Descrição</th>
                 <th>Unidade de Medida</th>
                 <th>Local de Armazenamento</th>
-                {/* Removido o espaço em branco problemático e garantido que não há quebras de linha entre <th> e </th> */}
+                <th>Estoque Mínimo</th> {/* Nova coluna para exibir o estoque mínimo */}
                 {(user.tipo_usuario === "almoxarife_central" ||
                   user.tipo_usuario === "almoxarife_local") && <th>Ações</th>}
               </tr>
@@ -336,6 +351,7 @@ const Insumos = () => {
                     <td>{insumo.descricao || "N/A"}</td>
                     <td>{insumo.unidade_medida || "N/A"}</td>
                     <td>{insumo.local_armazenamento || "N/A"}</td>
+                    <td>{insumo.estoque_minimo}</td> {/* Exibir o valor do estoque_minimo */}
                     {(user.tipo_usuario === "almoxarife_central" ||
                       user.tipo_usuario === "almoxarife_local") && (
                       <td>
@@ -365,8 +381,8 @@ const Insumos = () => {
                     colSpan={
                       user.tipo_usuario === "almoxarife_central" ||
                       user.tipo_usuario === "almoxarife_local"
-                        ? "6"
-                        : "5"
+                        ? "7" // Colspan ajustado para incluir a nova coluna
+                        : "6" // Colspan ajustado para incluir a nova coluna
                     }
                   >
                     <NoDataMessage>Nenhum insumo cadastrado.</NoDataMessage>

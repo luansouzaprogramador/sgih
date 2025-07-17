@@ -54,14 +54,11 @@ const Agendamentos = () => {
     quantidade: "",
   });
 
-  // Effect for handling user authentication and role-based redirection
+  // Effect for handling user authentication
   useEffect(() => {
     if (user === null) {
       // User is explicitly null, meaning not authenticated. Redirect to login.
       navigate("/login");
-    } else if (user && user.tipo_usuario !== "almoxarife_central") {
-      // User is authenticated but not the correct role. Redirect to dashboard.
-      navigate("/dashboard");
     }
     // If user is undefined, it means authentication context is still loading.
     // We let the component render a loading state or similar until user is resolved.
@@ -79,7 +76,8 @@ const Agendamentos = () => {
 
   const fetchAgendamentos = useCallback(async () => {
     try {
-      // For almoxarife_central, fetch all agendamentos from the general endpoint
+      // Ambos almoxarife_central e almoxarife_local chamam a mesma rota GET /agendamentos
+      // O backend filtra os resultados com base no tipo de usuário e unidade.
       const response = await api.get("/agendamentos");
 
       const processedAgendamentos = response.data.map((agendamento) => {
@@ -106,7 +104,6 @@ const Agendamentos = () => {
       setAgendamentos(processedAgendamentos);
     } catch (error) {
       console.error("Erro ao carregar agendamentos:", error);
-      // Specific error handling for 401/403
       if (
         error.response &&
         (error.response.status === 401 || error.response.status === 403)
@@ -115,24 +112,29 @@ const Agendamentos = () => {
           "Sessão expirada ou acesso não autorizado. Faça login novamente.",
           "error"
         );
-        logout(); // Logout user and clear token
-        navigate("/login"); // Redirect to login
+        logout();
+        navigate("/login");
       } else {
         displayMessage("Erro ao carregar agendamentos.", "error");
       }
     }
-  }, [displayMessage, logout, navigate]);
+  }, [displayMessage, logout, navigate, user]); // Added user to dependencies
 
   useEffect(() => {
     const fetchData = async () => {
-      // Ensure user is defined and is almoxarife_central before fetching data
-      // This check also handles the initial undefined state of 'user'
-      if (!user || user.tipo_usuario !== "almoxarife_central") {
-        setIsLoading(false); // Stop loading if user is not valid for this page
+      if (!user) {
+        setIsLoading(false);
         return;
       }
 
-      setIsLoading(true); // Start loading
+      // Restrict access for roles other than almoxarife_central and almoxarife_local
+      if (user.tipo_usuario !== "almoxarife_central" && user.tipo_usuario !== "almoxarife_local") {
+        navigate("/dashboard"); // Redirect to dashboard if not authorized
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
       try {
         const [unidadesRes, insumosRes] = await Promise.all([
           api.get("/unidades"),
@@ -141,29 +143,37 @@ const Agendamentos = () => {
         setUnidades(unidadesRes.data);
         setInsumos(insumosRes.data);
 
-        // Fetch lots for all units for almoxarife_central
-        const lotesPromises = unidadesRes.data.map(async (unit) => {
-          // This call is now correctly handled by loteRoutes.js for almoxarife_central
-          const lotesRes = await api.get(`/lotes/${unit.id}`);
-          return { [unit.id]: lotesRes.data };
-        });
-
-        const allLotes = await Promise.all(lotesPromises);
-        const combinedLotes = allLotes.reduce(
-          (acc, current) => ({ ...acc, ...current }),
-          {}
-        );
+        // Fetch lots based on user role
+        let combinedLotes = {};
+        if (user.tipo_usuario === "almoxarife_central") {
+          // Almoxarife central pode selecionar qualquer unidade de origem, então precisa de todos os lotes
+          const lotesPromises = unidadesRes.data.map(async (unit) => {
+            const lotesRes = await api.get(`/lotes/${unit.id}`);
+            return { [unit.id]: lotesRes.data };
+          });
+          const allLotes = await Promise.all(lotesPromises);
+          combinedLotes = allLotes.reduce(
+            (acc, current) => ({ ...acc, ...current }),
+            {}
+          );
+        } else if (user.tipo_usuario === "almoxarife_local") {
+          // Almoxarife local só precisa dos lotes da sua própria unidade para criar agendamentos (se fosse permitido)
+          // ou para verificar estoque ao receber. No contexto atual, ele não cria agendamentos.
+          // Mas para a validação do formulário (que só aparece para central), manter a estrutura.
+          const lotesRes = await api.get(`/lotes/${user.unidade_id}`);
+          combinedLotes = { [user.unidade_id]: lotesRes.data };
+        }
         setLotesPorUnidade(combinedLotes);
 
-        // Fetch agendamentos after other data is loaded
-        await fetchAgendamentos(); // Await this call to ensure it finishes
+        await fetchAgendamentos();
 
-        // Set initial form origin unit if not already set or if user's unit changed
-        // Ensure form.unidade_origem_id is set to user's unit_id by default for almoxarife_central
-        setForm((prevForm) => ({
-          ...prevForm,
-          unidade_origem_id: user.unidade_id || "",
-        }));
+        // Set initial form origin unit if almoxarife_central
+        if (user.tipo_usuario === "almoxarife_central") {
+          setForm((prevForm) => ({
+            ...prevForm,
+            unidade_origem_id: user.unidade_id || "",
+          }));
+        }
       } catch (error) {
         console.error("Erro ao carregar dados iniciais:", error);
         if (
@@ -174,8 +184,6 @@ const Agendamentos = () => {
             "Sessão expirada ou acesso não autorizado. Faça login novamente.",
             "error"
           );
-          logout();
-          navigate("/login");
         } else {
           displayMessage(
             "Erro ao carregar dados iniciais. Tente novamente.",
@@ -183,12 +191,12 @@ const Agendamentos = () => {
           );
         }
       } finally {
-        setIsLoading(false); // End loading
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [user, fetchAgendamentos, displayMessage, navigate, logout]); // Removed form.unidade_origem_id from dependency as it's set once based on user
+  }, [user, fetchAgendamentos, displayMessage, navigate, logout]);
 
   const handleAddItem = () => {
     if (!currentItem.lote_id || !currentItem.quantidade) {
@@ -297,7 +305,7 @@ const Agendamentos = () => {
           .replace("T", " "),
       };
       await api.post("/agendamentos", payload);
-      displayMessage("Agendamento criado com sucesso!", "success");
+      displayMessage("Agendamento criado com sucesso! Status: Pendente.", "success");
       setForm({
         unidade_origem_id: user?.unidade_id || "", // Reset to user's unit after submission
         unidade_destino_id: "",
@@ -337,7 +345,23 @@ const Agendamentos = () => {
       return;
     }
     try {
-      await api.put(`/agendamentos/${scheduleId}/status`, { status });
+      // Almoxarife Central usa a rota /status para 'em_transito', 'concluido' ou 'cancelado'
+      if (user.tipo_usuario === "almoxarife_central") {
+        await api.put(`/agendamentos/${scheduleId}/status`, { status });
+      }
+      // Almoxarife Local usa a rota /receive para 'concluido'
+      else if (user.tipo_usuario === "almoxarife_local" && status === "concluido") {
+        await api.put(`/agendamentos/${scheduleId}/receive`); // No body needed, status is implicit
+      }
+      // Almoxarife Local também pode cancelar
+      else if (user.tipo_usuario === "almoxarife_local" && status === "cancelado") {
+        await api.put(`/agendamentos/${scheduleId}/status`, { status });
+      }
+      else {
+        displayMessage("Ação não permitida para seu perfil ou status atual.", "error");
+        return;
+      }
+
       displayMessage(
         "Status do agendamento atualizado com sucesso!",
         "success"
@@ -377,6 +401,22 @@ const Agendamentos = () => {
     (unit) => unit.id !== parseInt(form.unidade_origem_id)
   );
 
+  // Helper function to get status text
+  const getStatusText = (status) => {
+    switch (status) {
+      case "pendente":
+        return "Pendente";
+      case "em_transito":
+        return "Em Trânsito";
+      case "concluido":
+        return "Concluído";
+      case "cancelado":
+        return "Cancelado";
+      default:
+        return "";
+    }
+  };
+
   // Display loading state while user is undefined (loading auth context) or component is fetching initial data
   if (isLoading || user === undefined) {
     return (
@@ -386,9 +426,9 @@ const Agendamentos = () => {
     );
   }
 
-  // If user is null (not authenticated after loading) or not almoxarife_central,
+  // If user is null (not authenticated after loading) or not almoxarife_central/local,
   // the useEffect will have already redirected them. This is a fallback/defensive check.
-  if (user === null || user.tipo_usuario !== "almoxarife_central") {
+  if (user === null || (user.tipo_usuario !== "almoxarife_central" && user.tipo_usuario !== "almoxarife_local")) {
     return null; // Or a simple message like "Acesso Negado."
   }
 
@@ -407,174 +447,177 @@ const Agendamentos = () => {
         </MessageContainer>
       )}
 
-      <Card>
-        <h4>
-          <FaCalendarAlt /> Criar Novo Agendamento de Entrega
-        </h4>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="unidade_origem">Unidade de Origem:</label>
-            <select
-              id="unidade_origem"
-              value={form.unidade_origem_id}
-              onChange={(e) => {
-                setForm({
-                  ...form,
-                  unidade_origem_id: e.target.value,
-                  itens: [],
-                }); // Reset items when origin unit changes
-                setCurrentItem({ lote_id: "", quantidade: "" }); // Reset current item
-              }}
-              required
-            >
-              <option value="">Selecione a Unidade de Origem</option>
-              {unidades.map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="unidade_destino">Unidade de Destino:</label>
-            <select
-              id="unidade_destino"
-              value={form.unidade_destino_id}
-              onChange={(e) =>
-                setForm({ ...form, unidade_destino_id: e.target.value })
-              }
-              required
-            >
-              <option value="">Selecione a Unidade de Destino</option>
-              {destinationUnidades.map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.nome}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="data_agendamento">
-              Data e Hora do Agendamento:
-            </label>
-            <DatePicker
-              id="data_agendamento"
-              selected={form.data_agendamento}
-              onChange={(date) => setForm({ ...form, data_agendamento: date })}
-              showTimeSelect
-              dateFormat="dd/MM/yyyy HH:mm"
-              timeFormat="HH:mm"
-              timeIntervals={15}
-              placeholderText="Selecione a data e hora"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="observacao">Observação:</label>
-            <textarea
-              id="observacao"
-              value={form.observacao}
-              onChange={(e) => setForm({ ...form, observacao: e.target.value })}
-              rows="3"
-              placeholder="Ex: Urgente, manusear com cuidado..."
-            ></textarea>
-          </div>
-
-          <h5>Adicionar Itens ao Agendamento:</h5>
-          <ItemFormContainer>
-            <ItemFormRow>
-              <ItemFormColumn flex={2}>
-                <div className="form-group">
-                  <label htmlFor="lote_id">Lote do Insumo:</label>
-                  <select
-                    id="lote_id"
-                    value={currentItem.lote_id}
-                    onChange={(e) =>
-                      setCurrentItem({
-                        ...currentItem,
-                        lote_id: e.target.value,
-                      })
-                    }
-                    disabled={!form.unidade_origem_id}
-                  >
-                    <option value="">Selecione o Lote</option>
-                    {filteredAvailableLotes.map((lote) => (
-                      <option key={lote.id} value={lote.id}>
-                        {lote.insumo_nome} - Lote: {lote.numero_lote} (Qtd:{" "}
-                        {lote.quantidade_atual})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </ItemFormColumn>
-
-              <ItemFormColumn flex={1}>
-                <div className="form-group">
-                  <label htmlFor="quantidade">Quantidade:</label>
-                  <input
-                    id="quantidade"
-                    type="number"
-                    value={currentItem.quantidade}
-                    onChange={(e) =>
-                      setCurrentItem({
-                        ...currentItem,
-                        // Ensure quantity is a positive integer
-                        quantidade: Math.max(0, parseInt(e.target.value || 0)),
-                      })
-                    }
-                    min="1"
-                    max={
-                      filteredAvailableLotes.find(
-                        (l) => l.id === parseInt(currentItem.lote_id)
-                      )?.quantidade_atual || ""
-                    }
-                    disabled={!currentItem.lote_id}
-                  />
-                </div>
-              </ItemFormColumn>
-            </ItemFormRow>
-
-            <AddItemButton
-              type="button"
-              onClick={handleAddItem}
-              disabled={
-                !currentItem.lote_id ||
-                !currentItem.quantidade ||
-                parseInt(currentItem.quantidade) <= 0
-              }
-            >
-              <FaPlus /> Adicionar Item
-            </AddItemButton>
-          </ItemFormContainer>
-
-          {form.itens.length > 0 && (
-            <AddedItemsList>
-              <h5>Itens Agendados:</h5>
-              <ul>
-                {form.itens.map((item, index) => (
-                  <li key={index}>
-                    {item.insumo_nome} (Lote: {item.numero_lote}) - Qtd:{" "}
-                    {item.quantidade}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(index)}
-                    >
-                      X
-                    </button>
-                  </li>
+      {/* Formulário de Criação visível apenas para Almoxarife Central */}
+      {user.tipo_usuario === "almoxarife_central" && (
+        <Card>
+          <h4>
+            <FaCalendarAlt /> Criar Novo Agendamento de Entrega
+          </h4>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="unidade_origem">Unidade de Origem:</label>
+              <select
+                id="unidade_origem"
+                value={form.unidade_origem_id}
+                onChange={(e) => {
+                  setForm({
+                    ...form,
+                    unidade_origem_id: e.target.value,
+                    itens: [],
+                  }); // Reset items when origin unit changes
+                  setCurrentItem({ lote_id: "", quantidade: "" }); // Reset current item
+                }}
+                required
+              >
+                <option value="">Selecione a Unidade de Origem</option>
+                {unidades.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.nome}
+                  </option>
                 ))}
-              </ul>
-            </AddedItemsList>
-          )}
+              </select>
+            </div>
 
-          <button type="submit" className="btn btn-primary">
-            <FaExchangeAlt /> Agendar Entrega
-          </button>
-        </form>
-      </Card>
+            <div className="form-group">
+              <label htmlFor="unidade_destino">Unidade de Destino:</label>
+              <select
+                id="unidade_destino"
+                value={form.unidade_destino_id}
+                onChange={(e) =>
+                  setForm({ ...form, unidade_destino_id: e.target.value })
+                }
+                required
+              >
+                <option value="">Selecione a Unidade de Destino</option>
+                {destinationUnidades.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="data_agendamento">
+                Data e Hora do Agendamento:
+              </label>
+              <DatePicker
+                id="data_agendamento"
+                selected={form.data_agendamento}
+                onChange={(date) => setForm({ ...form, data_agendamento: date })}
+                showTimeSelect
+                dateFormat="dd/MM/yyyy HH:mm"
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                placeholderText="Selecione a data e hora"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="observacao">Observação:</label>
+              <textarea
+                id="observacao"
+                value={form.observacao}
+                onChange={(e) => setForm({ ...form, observacao: e.target.value })}
+                rows="3"
+                placeholder="Ex: Urgente, manusear com cuidado..."
+              ></textarea>
+            </div>
+
+            <h5>Adicionar Itens ao Agendamento:</h5>
+            <ItemFormContainer>
+              <ItemFormRow>
+                <ItemFormColumn flex={2}>
+                  <div className="form-group">
+                    <label htmlFor="lote_id">Lote do Insumo:</label>
+                    <select
+                      id="lote_id"
+                      value={currentItem.lote_id}
+                      onChange={(e) =>
+                        setCurrentItem({
+                          ...currentItem,
+                          lote_id: e.target.value,
+                        })
+                      }
+                      disabled={!form.unidade_origem_id}
+                    >
+                      <option value="">Selecione o Lote</option>
+                      {filteredAvailableLotes.map((lote) => (
+                        <option key={lote.id} value={lote.id}>
+                          {lote.insumo_nome} - Lote: {lote.numero_lote} (Qtd:{" "}
+                          {lote.quantidade_atual})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </ItemFormColumn>
+
+                <ItemFormColumn flex={1}>
+                  <div className="form-group">
+                    <label htmlFor="quantidade">Quantidade:</label>
+                    <input
+                      id="quantidade"
+                      type="number"
+                      value={currentItem.quantidade}
+                      onChange={(e) =>
+                        setCurrentItem({
+                          ...currentItem,
+                          // Ensure quantity is a positive integer
+                          quantidade: Math.max(0, parseInt(e.target.value || 0)),
+                        })
+                      }
+                      min="1"
+                      max={
+                        filteredAvailableLotes.find(
+                          (l) => l.id === parseInt(currentItem.lote_id)
+                        )?.quantidade_atual || ""
+                      }
+                      disabled={!currentItem.lote_id}
+                    />
+                  </div>
+                </ItemFormColumn>
+              </ItemFormRow>
+
+              <AddItemButton
+                type="button"
+                onClick={handleAddItem}
+                disabled={
+                  !currentItem.lote_id ||
+                  !currentItem.quantidade ||
+                  parseInt(currentItem.quantidade) <= 0
+                }
+              >
+                <FaPlus /> Adicionar Item
+              </AddItemButton>
+            </ItemFormContainer>
+
+            {form.itens.length > 0 && (
+              <AddedItemsList>
+                <h5>Itens Agendados:</h5>
+                <ul>
+                  {form.itens.map((item, index) => (
+                    <li key={index}>
+                      {item.insumo_nome} (Lote: {item.numero_lote}) - Qtd:{" "}
+                      {item.quantidade}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(index)}
+                      >
+                        X
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </AddedItemsList>
+            )}
+
+            <button type="submit" className="btn btn-primary">
+              <FaExchangeAlt /> Agendar Entrega
+            </button>
+          </form>
+        </Card>
+      )}
 
       <TableContainer>
         <h3>Agendamentos de Entregas</h3>
@@ -614,52 +657,85 @@ const Agendamentos = () => {
                   </td>
                   <td>
                     <StatusPill status={schedule.status}>
-                      {schedule.status === "pendente" && "Pendente"}
-                      {schedule.status === "em_transito" && "Em Trânsito"}
-                      {schedule.status === "concluido" && "Concluído"}
-                      {schedule.status === "cancelado" && "Cancelado"}
+                      {getStatusText(schedule.status)}
                     </StatusPill>
                   </td>
                   <td>{schedule.responsavel_agendamento_nome}</td>
                   <td>
                     <ActionButtons>
-                      {schedule.status === "pendente" && (
-                        <button
-                          className="btn btn-info"
-                          onClick={() =>
-                            handleUpdateScheduleStatus(
-                              schedule.id,
-                              "em_transito"
-                            )
-                          }
-                          title="Marcar como Em Trânsito"
-                        >
-                          <FaTruck />
-                        </button>
+                      {/* Botões para Almoxarife Central */}
+                      {user.tipo_usuario === "almoxarife_central" && (
+                        <>
+                          {schedule.status === "pendente" && (
+                            <button
+                              className="btn btn-info"
+                              onClick={() =>
+                                handleUpdateScheduleStatus(
+                                  schedule.id,
+                                  "em_transito"
+                                )
+                              }
+                              title="Marcar como Em Trânsito"
+                            >
+                              <FaTruck />
+                            </button>
+                          )}
+                          {/* Almoxarife Central pode marcar como Concluído */}
+                          {schedule.status === "em_transito" && (
+                            <button
+                              className="btn btn-success"
+                              onClick={() =>
+                                handleUpdateScheduleStatus(schedule.id, "concluido")
+                              }
+                              title="Marcar como Concluído"
+                            >
+                              <FaCheckCircle />
+                            </button>
+                          )}
+                          {(schedule.status === "pendente" ||
+                            schedule.status === "em_transito") && (
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() =>
+                                handleUpdateScheduleStatus(schedule.id, "cancelado")
+                              }
+                              title="Cancelar Agendamento"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </>
                       )}
-                      {schedule.status === "em_transito" && (
-                        <button
-                          className="btn btn-success"
-                          onClick={() =>
-                            handleUpdateScheduleStatus(schedule.id, "concluido")
-                          }
-                          title="Marcar como Concluído"
-                        >
-                          <FaCheckCircle />
-                        </button>
-                      )}
-                      {(schedule.status === "pendente" ||
-                        schedule.status === "em_transito") && (
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() =>
-                            handleUpdateScheduleStatus(schedule.id, "cancelado")
-                          }
-                          title="Cancelar Agendamento"
-                        >
-                          Cancelar
-                        </button>
-                      )}
+
+                      {/* Botão para Almoxarife Local (apenas para receber na sua unidade) */}
+                      {user.tipo_usuario === "almoxarife_local" &&
+                        schedule.status === "em_transito" &&
+                        schedule.unidade_destino_id === user.unidade_id && (
+                          <button
+                            className="btn btn-success"
+                            onClick={() =>
+                              handleUpdateScheduleStatus(schedule.id, "concluido")
+                            }
+                            title="Marcar como Recebido (Concluído)"
+                          >
+                            <FaCheckCircle /> Receber
+                          </button>
+                        )}
+                      {/* Almoxarife Local pode cancelar se a unidade for origem ou destino e não estiver concluído */}
+                      {user.tipo_usuario === "almoxarife_local" &&
+                        (schedule.status === "pendente" || schedule.status === "em_transito") &&
+                        (schedule.unidade_origem_id === user.unidade_id || schedule.unidade_destino_id === user.unidade_id) &&
+                        schedule.status !== "concluido" && (
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() =>
+                              handleUpdateScheduleStatus(schedule.id, "cancelado")
+                            }
+                            title="Cancelar Agendamento"
+                          >
+                            Cancelar
+                          </button>
+                        )}
                     </ActionButtons>
                   </td>
                 </tr>

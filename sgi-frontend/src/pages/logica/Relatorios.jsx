@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
 import { MessageContainer } from "../style/ConfiguracoesStyles";
@@ -54,7 +54,7 @@ const Relatorios = () => {
       const response = await api.get("/unidades");
       setUnits(response.data);
     } catch (error) {
-      console.error("Error fetching units:", error);
+      console.error("Erro ao carregar unidades:", error);
     }
   };
 
@@ -76,7 +76,7 @@ const Relatorios = () => {
       const response = await api.get(url);
       setMovements(response.data);
     } catch (error) {
-      console.error("Error fetching movements:", error);
+      console.error("Erro ao carregar movimentações:", error);
       setMovements([]);
     }
   };
@@ -90,7 +90,7 @@ const Relatorios = () => {
       const response = await api.get(url);
       setMovements(response.data);
     } catch (error) {
-      console.error("Error fetching critical stock:", error);
+      console.error("Erro ao carregar estoque crítico:", error);
       setMovements([]);
     }
   };
@@ -105,7 +105,8 @@ const Relatorios = () => {
 
   const exportToCSV = (data, filename) => {
     if (!data || data.length === 0) {
-      alert("Nenhum dado para exportar.");
+      // Replaced alert with a custom message box for better UX
+      displayMessage("Nenhum dado para exportar.", "error");
       return;
     }
     const header = Object.keys(data[0]).join(",");
@@ -123,7 +124,8 @@ const Relatorios = () => {
 
   const exportToExcel = (data, filename) => {
     if (!data || data.length === 0) {
-      alert("Nenhum dado para exportar.");
+      // Replaced alert with a custom message box for better UX
+      displayMessage("Nenhum dado para exportar.", "error");
       return;
     }
     const ws = XLSX.utils.json_to_sheet(data);
@@ -133,8 +135,23 @@ const Relatorios = () => {
   };
 
   const exportToPDF = () => {
-    alert("Funcionalidade de exportar para PDF não implementada ainda.");
+    // Replaced alert with a custom message box for better UX
+    displayMessage("Funcionalidade de exportar para PDF não implementada ainda.", "info");
   };
+
+  // Function to display messages (similar to Agendamentos.jsx)
+  const displayMessage = useCallback((message, type) => {
+    setFeedbackMessage(message);
+    setMessageType(type);
+    const timer = setTimeout(() => {
+      setFeedbackMessage(null);
+      setMessageType(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const [feedbackMessage, setFeedbackMessage] = useState(null);
+  const [messageType, setMessageType] = useState(null);
 
   // Conditional rendering based on user type
   // Allow both almoxarife_central and almoxarife_local to access
@@ -155,6 +172,17 @@ const Relatorios = () => {
   return (
     <ReportsPageContainer>
       <Title>Relatórios</Title>
+
+      {feedbackMessage && (
+        <MessageContainer type={messageType}>
+          {messageType === "error" ? (
+            <FaExclamationCircle />
+          ) : (
+            <FaCheckCircle />
+          )}
+          {feedbackMessage}
+        </MessageContainer>
+      )}
 
       <ReportCard>
         <h4>
@@ -199,6 +227,9 @@ const Relatorios = () => {
               />
             </>
           )}
+          <button onClick={handleGenerateReport} className="btn btn-primary">
+            Gerar Relatório
+          </button>
         </FilterGroup>
 
         <TableContainer>

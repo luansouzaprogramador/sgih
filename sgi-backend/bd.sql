@@ -1,6 +1,6 @@
 -- Criar Banco de Dados
-CREATE DATABASE IF NOT EXISTS sgih;
-USE sgih;
+CREATE DATABASE IF NOT EXISTS sgih_test;
+USE sgih_test;
 
 -- Tabela para Unidades Hospitalares
 CREATE TABLE IF NOT EXISTS unidades_hospitalares (
@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS insumos (
     unidade_medida VARCHAR(50), -- E.g., "caixa", "unidade", "litro"
     local_armazenamento VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    estoque_minimo INT NOT NULL DEFAULT 0
 );
 
 -- Tabela para Lotes (para rastreabilidade por lote e validade)
@@ -122,8 +123,6 @@ CREATE TABLE IF NOT EXISTS solicitacoes_insumo (
     FOREIGN KEY (solicitante_id) REFERENCES usuarios(id)
 );
 
-USE sgih;
-
 -- Inserir Unidades Hospitalares
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('Hospital Central FHEMIG', 'Rua Principal, 123, Centro', '31987654321', 'hospital.central@fhemig.gov.br');
 INSERT INTO unidades_hospitalares (nome, endereco, telefone, email) VALUES ('UPA Leste FHEMIG', 'Av. Afonso Pena, 456, Boa Vista', '31998765432', 'upa.leste@fhemig.gov.br');
@@ -137,7 +136,6 @@ INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Lua
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Luana', 'luana@fhemig.gov.br', '$2b$10$QdhHNcgLTbXhaN8uKhqsterdNArfZfFQslbcxGPxa8/yMlfEYQ3vO', 'almoxarife_local', 1);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Marly', 'marly@fhemig.gov.br', '$2b$10$utsgmHt1y6EEHjyq9XTgSeoIRHp9kgJkPy5.USWZMkxQAPoOmimLS', 'profissional_saude', 1);
 
-USE sgih;
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Gustavo', 'gustavo@fhemig.gov.br', '$2b$10$YqguZdt.go6N/FlzmaW0m.9v8TN7OJ8GVnx3wctk4VnNcrJ4DZB6G', 'gestor', 2);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Guilherme', 'guilherme@fhemig.gov.br', '$2b$10$OPZ/kaWHFa/DhVASF37PC.risjMeYgp1fE.FjLaCEAAaVb.n8I4Qy', 'almoxarife_local', 2);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Daniel', 'daniel@fhemig.gov.br', '$2b$10$AUWf6nhSxV/4o0CPFq98QOYhQSVZAaEAAB3BOwD8EVoeTMgI.Zk1K', 'profissional_saude', 2);
@@ -150,25 +148,24 @@ INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Sam
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('João', 'joao@fhemig.gov.br', '$2b$10$HXEIyjGPOpk416sUXelCNu8MFC6dQxWxotetyCXMmwtqK9b7yH/oi', 'almoxarife_local', 4);
 INSERT INTO usuarios (nome, email, senha, tipo_usuario, unidade_id) VALUES ('Henrique', 'henrique@fhemig.gov.br', '$2b$10$wXcvcSQ3DmpsyIFMy4AOoO3rMVyniPtgjGJFCNionRp6YoGF5q6n2', 'profissional_saude', 4);
 
-USE sgih;
--- Inserir Insumos
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Luvas de Procedimento', 'Luvas descartáveis de látex ou nitrilo', 'caixa', 'Armazenar em local seco e protegido da luz');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Álcool 70%', 'Solução de álcool etílico a 70% para assepsia', 'litro', 'Manter em local ventilado e afastado de fontes de calor');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Gaze Estéril', 'Compressas de gaze esterilizadas', 'pacote', 'Proteger da umidade e contaminação');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Seringa Descartável', 'Seringa plástica para uso único', 'unidade', 'Armazenar em embalagem original, em local limpo');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Agulha Descartável', 'Agulha hipodérmica para uso único', 'unidade', 'Manter em local seco e fresco, longe do alcance de crianças');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Atadura de Crepe', 'Faixa elástica para imobilização e compressão', 'rolo', 'Guardar em local fresco e seco');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Esparadrapo', 'Fita adesiva hipoalergênica', 'rolo', 'Conservar em local limpo e seco');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Algodão Hidrófilo', 'Algodão para curativos e limpeza', 'pacote', 'Proteger da umidade');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Sabonete Antisséptico', 'Sabonete líquido com agentes bactericidas', 'litro', 'Armazenar em temperatura ambiente');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Lençol Descartável', 'Lençol de TNT para macas e leitos', 'pacote', 'Manter em local limpo e seco');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Cânula Nasal', 'Dispositivo para administração de oxigênio', 'unidade', 'Armazenar em embalagem lacrada, em local protegido');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Clorexidina Tópica', 'Solução antisséptica de clorexidina para uso externo', 'litro', 'Manter em local fresco e protegido da luz');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Scalp Descartável', 'Dispositivo para acesso venoso periférico', 'unidade', 'Armazenar em embalagem estéril, em local limpo');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Bandagem Elástica', 'Faixa elástica adesiva para compressão', 'rolo', 'Guardar em local seco e fresco');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Termômetro Clínico', 'Termômetro digital para medição de temperatura corporal', 'unidade', 'Manter em local seco e protegido de impactos');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Gorro Descartável', 'Gorro de TNT para proteção capilar', 'pacote', 'Proteger da umidade e sujeira');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Propé Descartável', 'Protetor de calçados de TNT', 'pacote', 'Armazenar em local limpo e seco');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Caixa de Descarte (Perfurocortantes)', 'Recipiente para descarte seguro de materiais perfurocortantes', 'unidade', 'Manter em local de fácil acesso, mas seguro');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Compressa Cirúrgica', 'Compressa de algodão para procedimentos cirúrgicos', 'pacote', 'Armazenar em embalagem estéril e protegida da umidade');
-INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento) VALUES ('Água Destilada', 'Água purificada para diluição de medicamentos e soluções', 'litro', 'Manter em recipiente fechado, em local fresco');
+-- Inserir Insumos com estoque_minimo
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Luvas de Procedimento', 'Luvas descartáveis de látex ou nitrilo', 'caixa', 'Armazenar em local seco e protegido da luz', 50);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Álcool 70%', 'Solução de álcool etílico a 70% para assepsia', 'litro', 'Manter em local ventilado e afastado de fontes de calor', 10);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Gaze Estéril', 'Compressas de gaze esterilizadas', 'pacote', 'Proteger da umidade e contaminação', 20);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Seringa Descartável', 'Seringa plástica para uso único', 'unidade', 'Armazenar em embalagem original, em local limpo', 100);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Agulha Descartável', 'Agulha hipodérmica para uso único', 'unidade', 'Manter em local seco e fresco, longe do alcance de crianças', 100);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Atadura de Crepe', 'Faixa elástica para imobilização e compressão', 'rolo', 'Guardar em local fresco e seco', 30);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Esparadrapo', 'Fita adesiva hipoalergênica', 'rolo', 'Conservar em local limpo e seco', 15);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Algodão Hidrófilo', 'Algodão para curativos e limpeza', 'pacote', 'Proteger da umidade', 25);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Sabonete Antisséptico', 'Sabonete líquido com agentes bactericidas', 'litro', 'Armazenar em temperatura ambiente', 5);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Lençol Descartável', 'Lençol de TNT para macas e leitos', 'pacote', 'Manter em local limpo e seco', 40);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Cânula Nasal', 'Dispositivo para administração de oxigênio', 'unidade', 'Armazenar em embalagem lacrada, em local protegido', 70);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Clorexidina Tópica', 'Solução antisséptica de clorexidina para uso externo', 'litro', 'Manter em local fresco e protegido da luz', 8);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Scalp Descartável', 'Dispositivo para acesso venoso periférico', 'unidade', 'Armazenar em embalagem estéril, em local limpo', 90);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Bandagem Elástica', 'Faixa elástica adesiva para compressão', 'rolo', 'Guardar em local seco e fresco', 20);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Termômetro Clínico', 'Termômetro digital para medição de temperatura corporal', 'unidade', 'Manter em local seco e protegido de impactos', 5);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Gorro Descartável', 'Gorro de TNT para proteção capilar', 'pacote', 'Proteger da umidade e sujeira', 60);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Propé Descartável', 'Protetor de calçados de TNT', 'pacote', 'Armazenar em local limpo e seco', 80);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Caixa de Descarte (Perfurocortantes)', 'Recipiente para descarte seguro de materiais perfurocortantes', 'unidade', 'Manter em local de fácil acesso, mas seguro', 3);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Compressa Cirúrgica', 'Compressa de algodão para procedimentos cirúrgicos', 'pacote', 'Armazenar em embalagem estéril e protegida da umidade', 35);
+INSERT INTO insumos (nome, descricao, unidade_medida, local_armazenamento, estoque_minimo) VALUES ('Água Destilada', 'Água purificada para diluição de medicamentos e soluções', 'litro', 'Manter em recipiente fechado, em local fresco', 12);

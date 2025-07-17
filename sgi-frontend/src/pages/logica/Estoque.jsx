@@ -53,29 +53,34 @@ const EstoqueGeral = () => {
   const fetchLotes = async (unitId) => {
     if (!user) return;
 
-    let endpoint = "/lotes"; // Default for central or if no unit specified
-    if (user.tipo_usuario === "almoxarife_local") {
-      // Almoxarife local can only see their own unit's lots
+    let endpoint = `/lotes/${unitId}`; // Default for a specific unit
+    if (user.tipo_usuario === "almoxarife_central" && (!unitId || unitId === "all")) {
+      // Almoxarife central can see all lots if "Todas as Unidades" is selected
+      // Assuming a backend route like /lotes/all exists or iterating through units
+      // For simplicity, if unitId is 'all', we'll call the general /lotes route (if backend supports it for central)
+      // Otherwise, we'll fetch for each unit and combine.
+      // Given the current loteRoutes.js, it expects a unitId. So we'll fetch for each unit if 'all' is selected.
+      endpoint = `/lotes/${unitId || user.unidade_id}`; // Fallback to user's unit if no unitId is provided for central
+    } else if (user.tipo_usuario === "almoxarife_local") {
       endpoint = `/lotes/${user.unidade_id}`;
-    } else if (user.tipo_usuario === "almoxarife_central") {
-      // Almoxarife central can see all or filter by unit
-      if (unitId && unitId !== "all") {
-        endpoint = `/lotes/${unitId}`;
-      } else {
-        // If "Todas as Unidades" is selected, the backend needs a route for all lots
-        // Assuming backend /lotes (without ID) returns all for almoxarife_central
-        // If not, this would need to iterate through units or have a dedicated backend route
-        endpoint = `/lotes/all`; // Placeholder, assuming backend supports /lotes/all or similar
-      }
-    } else {
-      // Other roles like gestor or profissional_saude shouldn't see this page based on requirements
-      setLotes([]);
-      return;
     }
 
+
     try {
-      const response = await api.get(endpoint);
-      setLotes(response.data);
+      let responseData = [];
+      if (user.tipo_usuario === "almoxarife_central" && (!unitId || unitId === "all")) {
+        // Fetch lots for all units for central almoxarife
+        const allUnits = await api.get("/unidades");
+        const lotesPromises = allUnits.data.map(unit => api.get(`/lotes/${unit.id}`));
+        const allLotesResponses = await Promise.all(lotesPromises);
+        allLotesResponses.forEach(res => {
+          responseData = [...responseData, ...res.data];
+        });
+      } else {
+        const response = await api.get(endpoint);
+        responseData = response.data;
+      }
+      setLotes(responseData);
     } catch (error) {
       console.error("Error fetching lotes:", error);
       // This page doesn't have a feedback message container, so log to console
@@ -91,7 +96,7 @@ const EstoqueGeral = () => {
         setFilterUnit(user.unidade_id);
         fetchLotes(user.unidade_id);
       } else if (user.tipo_usuario === "almoxarife_central") {
-        setFilterUnit(""); // Default to "Todas as Unidades" for central
+        setFilterUnit("all"); // Default to "Todas as Unidades" for central
         fetchLotes("all"); // Fetch all for central by default
       }
     }
@@ -110,7 +115,8 @@ const EstoqueGeral = () => {
     if (isExpired) {
       return "Vencido";
     }
-    if (lote.quantidade_atual < 20) { // Threshold for "Baixo" stock
+    // Use lote.estoque_minimo for "Baixo" stock status
+    if (lote.quantidade_atual <= lote.estoque_minimo) { 
       return "Baixo";
     }
     return "Ativo";
@@ -151,7 +157,7 @@ const EstoqueGeral = () => {
               value={filterUnit}
               onChange={(e) => setFilterUnit(e.target.value)}
             >
-              <option value="">Todas as Unidades</option>
+              <option value="all">Todas as Unidades</option>
               {unidades.map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {unit.nome}
