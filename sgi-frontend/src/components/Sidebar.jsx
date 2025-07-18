@@ -8,11 +8,12 @@ import {
   FaCalendarAlt,
   FaChartBar,
   FaCogs,
-  FaPrescriptionBottleAlt,
+  FaPrescriptionBottleAlt, // Icon for Gerenciar Insumos
   FaHospitalAlt,
   FaSignInAlt, // Icon for Entrada
   FaSignOutAlt, // Icon for Saída
   FaExchangeAlt, // Icon for Solicitations
+  FaClipboardList, // Icon for Solicitar Insumos
 } from "react-icons/fa";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -162,7 +163,7 @@ const Sidebar = () => {
                 to="/solicitacoes-insumo-local"
                 className={location.pathname === "/solicitacoes-insumo-local" ? "active" : ""}
               >
-                <FaExchangeAlt /> Solicitar Insumo (Local)
+                <FaExchangeAlt /> Minhas Solicitações (Local)
               </Link>
             </NavItem>
           </>
@@ -209,15 +210,29 @@ const Sidebar = () => {
           </NavItem>
         )}
 
-        {/* Gerenciar Insumos é acessível a todos os tipos de usuário, mas a funcionalidade de adicionar/editar/excluir é restrita */}
-        <NavItem>
-          <Link
-            to="/insumos"
-            className={location.pathname === "/insumos" ? "active" : ""}
-          >
-            <FaPrescriptionBottleAlt /> Gerenciar Insumo
-          </Link>
-        </NavItem>
+        {/* Nova navegação para Gerenciar Insumos (apenas para almoxarifes CENTRAIS) */}
+        {isAlmoxarifeCentral && (
+          <NavItem>
+            <Link
+              to="/gerenciar-insumos"
+              className={location.pathname === "/gerenciar-insumos" ? "active" : ""}
+            >
+              <FaPrescriptionBottleAlt /> Gerenciar Insumos
+            </Link>
+          </NavItem>
+        )}
+
+        {/* Nova navegação para Solicitar Insumos (apenas para gestores e profissionais de saúde) */}
+        {(isManager || isProfissionalSaude) && (
+          <NavItem>
+            <Link
+              to="/solicitar-insumos"
+              className={location.pathname === "/solicitar-insumos" ? "active" : ""}
+            >
+              <FaClipboardList /> Solicitar Insumos
+            </Link>
+          </NavItem>
+        )}
 
         {isManager && (
           <NavItem>
