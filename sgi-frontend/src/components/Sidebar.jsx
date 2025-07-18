@@ -8,7 +8,7 @@ import {
   FaCalendarAlt,
   FaChartBar,
   FaCogs,
-  FaPrescriptionBottleAlt, // Icon for Gerenciar Insumos
+  FaPrescriptionBottleAlt, // Icon for Cadastrar Insumos
   FaHospitalAlt,
   FaSignInAlt, // Icon for Entrada
   FaSignOutAlt, // Icon for Saída
@@ -121,10 +121,10 @@ const Sidebar = () => {
       <NavList>
         <NavItem>
           <Link
-            to="/dashboard"
-            className={location.pathname === "/dashboard" ? "active" : ""}
+            to="/painel"
+            className={location.pathname === "/painel" ? "active" : ""}
           >
-            <FaTachometerAlt /> Dashboard
+            <FaTachometerAlt /> Painel
           </Link>
         </NavItem>
 
@@ -210,14 +210,14 @@ const Sidebar = () => {
           </NavItem>
         )}
 
-        {/* Nova navegação para Gerenciar Insumos (apenas para almoxarifes CENTRAIS) */}
+        {/* Nova navegação para Cadastrar Insumos (apenas para almoxarifes CENTRAIS) */}
         {isAlmoxarifeCentral && (
           <NavItem>
             <Link
               to="/gerenciar-insumos"
               className={location.pathname === "/gerenciar-insumos" ? "active" : ""}
             >
-              <FaPrescriptionBottleAlt /> Gerenciar Insumos
+              <FaPrescriptionBottleAlt /> Cadastrar Insumos
             </Link>
           </NavItem>
         )}
@@ -240,17 +240,17 @@ const Sidebar = () => {
               to="/unidades"
               className={location.pathname === "/unidades" ? "active" : ""}
             >
-              <FaHospitalAlt /> Gerenciar Unidades
+              <FaHospitalAlt /> Cadastrar Unidades
             </Link>
           </NavItem>
         )}
         {isManager && (
           <NavItem>
             <Link
-              to="/configuracoes"
-              className={location.pathname === "/configuracoes" ? "active" : ""}
+              to="/usuarios"
+              className={location.pathname === "/usuarios" ? "active" : ""}
             >
-              <FaCogs /> Configurações
+              <FaCogs /> Cadastrar Usuários
             </Link>
           </NavItem>
         )}

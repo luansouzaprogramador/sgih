@@ -165,7 +165,7 @@ const Insumos = () => {
 
   return (
     <InsumosPageContainer>
-      <Title>Gerenciar Insumos</Title>
+      <Title>Cadastrar Insumos</Title>
 
       {feedbackMessage && (
         <MessageContainer type={messageType}>

@@ -140,7 +140,7 @@ const Unidades = () => {
 
   return (
     <UnitsPageContainer>
-      <Title>Gestão de Unidades Hospitalares</Title>
+      <Title>Cadastro de Unidades Hospitalares</Title>
 
       {feedbackMessage && (
         <MessageContainer type={messageType}>

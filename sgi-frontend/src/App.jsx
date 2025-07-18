@@ -9,13 +9,13 @@ import { useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import Login from "./pages/logica/Login";
-import Dashboard from "./pages/logica/Dashboard";
+import Painel from "./pages/logica/Painel";
 import Estoque from "./pages/logica/Estoque";
 import EntradaInsumoLocal from "./pages/logica/EntradaInsumo"; // Renomeado para EntradaInsumoLocal
 import SaidaInsumoLocal from "./pages/logica/SaidaInsumo"; // Renomeado para SaidaInsumoLocal
 import Agendamentos from "./pages/logica/Agendamentos";
 import Relatorios from "./pages/logica/Relatorios";
-import Configuracoes from "./pages/logica/Configuracoes";
+import Usuarios from "./pages/logica/Usuarios";
 // import Insumos from "./pages/logica/Insumos"; // Removido o Insumos original
 import Unidades from "./pages/logica/Unidades"; // Adicionado: Importação do componente Unidades
 
@@ -36,13 +36,13 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />}
+          element={isAuthenticated ? <Navigate to="/painel" /> : <Login />}
         />
         <Route
           path="/"
           element={
             isAuthenticated ? (
-              <Navigate to="/dashboard" />
+              <Navigate to="/painel" />
             ) : (
               <Navigate to="/login" />
             )
@@ -51,12 +51,12 @@ function App() {
 
         {/* Rotas Protegidas */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/painel" element={<Painel />} />
           <Route path="/estoque" element={<Estoque />} />
           <Route path="/agendamentos" element={<Agendamentos />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/unidades" element={<Unidades />} /> {/* Gerenciar Unidades é para gestor */}
-          <Route path="/configuracoes" element={<Configuracoes />} /> {/* Configurações é para gestor */}
+          <Route path="/usuarios" element={<Usuarios />} /> {/* Usuários é para gestor */}
 
           {/* Rotas Específicas para Almoxarife Local */}
           <Route path="/entrada-insumo-local" element={<EntradaInsumoLocal />} />

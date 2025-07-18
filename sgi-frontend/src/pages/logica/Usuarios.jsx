@@ -19,9 +19,9 @@ import {
   ButtonGroup,
   MessageContainer,
   NoDataMessage,
-} from "../style/ConfiguracoesStyles";
+} from "../style/UsuariosStyles";
 
-const Configuracoes = () => {
+const Usuarios = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [unidades, setUnidades] = useState([]);
@@ -163,7 +163,7 @@ const Configuracoes = () => {
 
   return (
     <SettingsPageContainer>
-      <Title>Configurações e Gestão de Usuários</Title>
+      <Title>Cadastro de Usuários</Title>
 
       {feedbackMessage && (
         <MessageContainer type={messageType}>
@@ -341,4 +341,4 @@ const Configuracoes = () => {
   );
 };
 
-export default Configuracoes;
+export default Usuarios;

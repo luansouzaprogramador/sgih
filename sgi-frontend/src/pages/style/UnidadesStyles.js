@@ -2,7 +2,7 @@ import styled from "styled-components";
 
 export const UnitsPageContainer = styled.div`
   padding: 30px;
-  background-color: #f8faff; /* Light background to match the dashboard */
+  background-color: #f8faff; /* Light background to match the painel */
   min-height: calc(100vh - 90px); /* Adjust to fill remaining height */
 `;
 

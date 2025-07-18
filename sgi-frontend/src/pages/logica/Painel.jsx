@@ -1,4 +1,3 @@
-// Filename: Dashboard.jsx
 import React, { useEffect, useState } from "react";
 import {
   FaWarehouse,
@@ -10,7 +9,7 @@ import {
 import api from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
 import {
-  DashboardContainer,
+  PainelContainer,
   WelcomeMessage,
   StatsGrid,
   StatCard,
@@ -20,12 +19,12 @@ import {
   AlertItem,
   Table,
   NoDataMessage,
-} from "../style/DashboardStyles"; // Import styled components
+} from "../style/PainelStyles"; // Import styled components
 
 // Constante para o ID da unidade central (agora uma unidade própria)
 const CENTRAL_UNIT_ID = 5; // ID da nova unidade 'Almoxarifado Central FHEMIG'
 
-const Dashboard = () => {
+const Painel = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     totalInsumos: 0,
@@ -38,7 +37,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchDashboardData = async () => {
+  const fetchPainelData = async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -127,21 +126,21 @@ const Dashboard = () => {
         solicitacoes: fetchedSolicitacoes,
       });
     } catch (err) {
-      console.error("Erro ao carregar dados do dashboard:", err);
-      setError("Erro ao carregar dados do dashboard.");
+      console.error("Erro ao carregar dados do painel:", err);
+      setError("Erro ao carregar dados do painel.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchPainelData();
   }, [user]);
 
   const handleUpdateSolicitationStatus = async (solicitacaoId, status) => {
     try {
       await api.put(`/solicitacoes/${solicitacaoId}/status`, { status });
-      fetchDashboardData();
+      fetchPainelData();
     } catch (err) {
       console.error(`Erro ao atualizar status da solicitação ${solicitacaoId} para ${status}:`, err);
       setError("Erro ao atualizar status da solicitação.");
@@ -149,16 +148,16 @@ const Dashboard = () => {
   };
 
   if (loading)
-    return <DashboardContainer>Carregando Dashboard...</DashboardContainer>;
+    return <PainelContainer>Carregando Painel...</PainelContainer>;
   if (error)
     return (
-      <DashboardContainer style={{ color: "red" }}>
+      <PainelContainer style={{ color: "red" }}>
         Erro: {error}
-      </DashboardContainer>
+      </PainelContainer>
     );
   if (!user)
     return (
-      <DashboardContainer>Por favor, faça login para ver o dashboard.</DashboardContainer>
+      <PainelContainer>Por favor, faça login para ver o painel.</PainelContainer>
     );
 
   const isAlmoxarifeCentral = user.tipo_usuario === "almoxarife_central";
@@ -168,7 +167,7 @@ const Dashboard = () => {
 
 
   return (
-    <DashboardContainer>
+    <PainelContainer>
       <WelcomeMessage>
         Bem-vindo, <span>{user.nome}!</span>
         {/* Exibe a unidade hospitalar se o usuário não for almoxarife central */}
@@ -339,8 +338,8 @@ const Dashboard = () => {
             </Card>
           </>
       )}
-    </DashboardContainer>
+    </PainelContainer>
   );
 };
 
-export default Dashboard;
+export default Painel;

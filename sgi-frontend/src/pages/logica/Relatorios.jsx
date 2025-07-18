@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api";
 import { useAuth } from "../../contexts/AuthContext";
-import { MessageContainer } from "../style/ConfiguracoesStyles";
+import { MessageContainer } from "../style/UsuariosStyles";
 import {
   FaFilePdf,
   FaFileCsv,

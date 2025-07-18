@@ -129,7 +129,7 @@ const Agendamentos = () => {
 
       // Restrict access for roles other than almoxarife_central and almoxarife_local
       if (user.tipo_usuario !== "almoxarife_central" && user.tipo_usuario !== "almoxarife_local") {
-        navigate("/dashboard"); // Redirect to dashboard if not authorized
+        navigate("/painel"); // Redirect to painel if not authorized
         setIsLoading(false);
         return;
       }

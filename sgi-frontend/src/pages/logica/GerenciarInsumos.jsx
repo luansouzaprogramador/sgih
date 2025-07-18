@@ -133,7 +133,7 @@ const GerenciarInsumos = () => {
     });
   };
 
-  // Apenas almoxarife central pode gerenciar insumos
+  // Apenas almoxarife central pode Cadastrar insumos
   const canManageInsumos = user?.tipo_usuario === "almoxarife_central";
 
   // Redireciona ou mostra mensagem de erro se o usuário não tiver permissão
@@ -150,7 +150,7 @@ const GerenciarInsumos = () => {
 
   return (
     <InsumosPageContainer>
-      <Title>Gerenciar Insumos</Title>
+      <Title>Cadastrar Insumos</Title>
 
       {feedbackMessage && (
         <MessageContainer type={messageType}>

@@ -8,19 +8,19 @@ O sistema é dividido em módulos, cada um com funcionalidades específicas e co
 
 ### Módulos Principais
 
-1.  **Dashboard**
+1.  **Painel**
 2.  **Estoque**
 3.  **Agendamentos**
 4.  **Relatórios**
 5.  **Insumos**
 6.  **Unidades**
-7.  **Configurações (Usuários)**
+7.  **Usuários**
 
 ---
 
-## 1. Dashboard (`Dashboard.jsx`)
+## 1. Painel (`Painel.jsx`)
 
-O Dashboard é a **página inicial** do sistema, fornecendo uma visão geral rápida e personalizada para o usuário logado.
+O Painel é a **página inicial** do sistema, fornecendo uma visão geral rápida e personalizada para o usuário logado.
 
 ### Funcionalidades:
 
@@ -138,9 +138,9 @@ A página de Unidades é para a administração das diferentes unidades hospital
 
 ---
 
-## 7. Configurações (`Configuracoes.jsx`)
+## 7. Usuários (`Usuários.jsx`)
 
-O módulo de Configurações é o painel de administração de usuários do sistema.
+O módulo de Usuários é o painel de administração de usuários do sistema.
 
 ### Funcionalidades:
 
